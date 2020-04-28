@@ -1,6 +1,7 @@
 const internet = require('../helper/checkinternet')
 const logger = require('../helper/logger')
 
+
 class Engine {
     constructor(){
         this.init()
@@ -12,6 +13,10 @@ class Engine {
            
         })
 
+    }
+
+    async start(){
+        
     }
 
 

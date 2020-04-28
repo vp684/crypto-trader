@@ -78,6 +78,26 @@ class MongoTools {
 
     };
 
+    /**
+     * 
+     * @param {*} db_name String for name of db must be 
+     */
+    CreateDB(db_name){
+        let _this = this
+        return new Promise((resolve, reject)=>{
+            if(_this.db){
+                _this.db.collection(db_name).createIndex({ "trade_id": -1 }, { unique: true })
+                _this.db.collection(db_name + '-transfers').createIndex({"id": -1}, {unique: true})
+                resolve(true)
+            }else{
+                reject(false)
+            }
+
+
+        })
+
+    }
+
     DisconnectDB(){
         if(this.db){
             this.db.close()
@@ -96,17 +116,12 @@ class MongoTools {
                 let col = market + "-flatid"
                 _this.db.collection(col).find().sort( {$natural: -1}).limit(1).toArray( function (err, result) {                 
                     if (err) { reject() }
-                   
                     else{
                        // console.log(result[0].flatid)
                         resolve(result[0].flatid)
                     }
-
                 }) 
 
-                // let readfile = jsonfile.readFileSync(_this.file_lastID)
-                // let theid = readfile[market]
-                // resolve(theid)
             }catch(e){
                 console.log(e)
                 reject()
@@ -124,7 +139,7 @@ class MongoTools {
         return new Promise((resolve, reject)=>{
             try{
                 let col = market + "-flatid"
-                  console.log('new falt id', lastflatid)
+                  console.log('new flat id', lastflatid)
                 let newflatid = {
                     flatid: lastflatid
                 }
