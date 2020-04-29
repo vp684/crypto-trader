@@ -23,78 +23,107 @@ class MongoTools {
                     if (error) {
                         if (error.code == 100) {
                             console.log('already running');
+                        }else{
+                            logger.error('Database child_process error', error)
                         } 
     
                     }
+                    if(stderr){
+                        console.log(stderr)
+                        logger.error('Database stderr error', error)
+                    }    
                     if (error === null) {
                         console.log(stdout);
                         _this.MongoClient.connect('mongodb://localhost:27017', function (err, database) {
                // assert.equal(null, err)
                             if(err){
-                                reject(false)
+                                logger.error('Database connction error', err)
+                                reject(false)                                
                                 return
                             }
                             if(database){
-                             
-                                _this.db = database.db('ETHFills');                            
-                                _this.db.collection('ETH-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                _this.db.collection('BTC-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                _this.db.collection('LTC-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                _this.db.collection('BCH-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                _this.db.collection('ZRX-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                _this.db.collection('ETH-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                _this.db.collection('BTC-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                _this.db.collection('LTC-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                _this.db.collection('BCH-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                _this.db.collection('ZRX-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                _this.db.createCollection('ETH-USD-books', {capped: true, size: 1024000000})
-                                _this.db.createCollection('BTC-USD-books', {capped: true, size: 1024000000})
-                                _this.db.createCollection('LTC-USD-books', {capped: true, size: 1024000000})
-                                _this.db.createCollection('ZRX-USD-books', {capped: true, size: 1024000000})
-                                _this.db.createCollection('BTC-USD-lastorders', {capped:true, size:512000000})
-                                _this.db.createCollection('ZRX-USD-lastorders', {capped:true, size:512000000})
-                                _this.db.collection('BTC-USD-lastorders').createIndex({'trade_id': -1}, {unique:true})
-                                _this.db.collection('ZRX-USD-lastorders').createIndex({'trade_id': -1}, {unique:true})
+                        
+                                _this.db = database.db('Crypto-Data');                            
+                                // _this.db.collection('ETH-USD').createIndex({ "trade_id": -1 }, { unique: true })
+                                // _this.db.collection('BTC-USD').createIndex({ "trade_id": -1 }, { unique: true })
+                                // _this.db.collection('LTC-USD').createIndex({ "trade_id": -1 }, { unique: true })
+                                // _this.db.collection('BCH-USD').createIndex({ "trade_id": -1 }, { unique: true })
+                                // _this.db.collection('ZRX-USD').createIndex({ "trade_id": -1 }, { unique: true })
+                                // _this.db.collection('ETH-USD-transfers').createIndex({"id": -1}, {unique: true})
+                                // _this.db.collection('BTC-USD-transfers').createIndex({"id": -1}, {unique: true})
+                                // _this.db.collection('LTC-USD-transfers').createIndex({"id": -1}, {unique: true})
+                                // _this.db.collection('BCH-USD-transfers').createIndex({"id": -1}, {unique: true})
+                                // _this.db.collection('ZRX-USD-transfers').createIndex({"id": -1}, {unique: true})
+                                // _this.db.createCollection('ETH-USD-books', {capped: true, size: 1024000000})
+                                // _this.db.createCollection('BTC-USD-books', {capped: true, size: 1024000000})
+                                // _this.db.createCollection('LTC-USD-books', {capped: true, size: 1024000000})
+                                // _this.db.createCollection('ZRX-USD-books', {capped: true, size: 1024000000})
+                                // _this.db.createCollection('BTC-USD-lastorders', {capped:true, size:512000000})
+                                // _this.db.createCollection('ZRX-USD-lastorders', {capped:true, size:512000000})
+                                // _this.db.collection('BTC-USD-lastorders').createIndex({'trade_id': -1}, {unique:true})
+                                // _this.db.collection('ZRX-USD-lastorders').createIndex({'trade_id': -1}, {unique:true})
 
-                                // _this.db.collection('ETH-USD-flatid').createIndex({'flat_id': -1}, {unique:true})
-                                // _this.db.collection('BTC-USD-flatid').createIndex({'flat_id': -1}, {unique:true})
-                                // _this.db.collection('LTC-USD-flatid').createIndex({'flat_id': -1}, {unique:true})
-                                // _this.db.collection('ZRX-USD-flatid').createIndex({'flat_id': -1}, {unique:true})
                                 console.log("Connected successfully to MongoDB")
                                 resolve(true)
                             }
                         })
                        
                     }    
-                    if(stderr){
-                        console.log(stderr)
-                    }                           
+                                           
                 })
 
             }catch(e){
                 reject(e)
+                logger.error('Database catch error', e)
             }
         })
 
     };
 
-    /**
-     * 
-     * @param {*} db_name String for name of db must be 
-     */
-    CreateDB(db_name){
+   /**
+    * 
+    * @param {*} market string - crypto marekt name eg ETH-USD
+    * @param {*} exchange string - exchange name all lowercase eg coinbase, gemini, binance
+    */
+    CreateFillsDB(market, exchange){
         let _this = this
         return new Promise((resolve, reject)=>{
             if(_this.db){
-                _this.db.collection(db_name).createIndex({ "trade_id": -1 }, { unique: true })
-                _this.db.collection(db_name + '-transfers').createIndex({"id": -1}, {unique: true})
+                _this.db.collection(market + '-fills-' + exchange).createIndex({ "trade_id": -1 }, { unique: true })         
                 resolve(true)
             }else{
+                logger.warn('CreateFillsDB promise reject, no db object')
                 reject(false)
             }
-
-
         })
+    }
+
+
+    /**
+     * 
+     * @param {*} market string - crypto marekt name eg ETH-USD
+     * @param {*} exchange string - exchange name all lowercase eg coinbase, gemini, binance
+     */
+    CreateTransfersDB(market, exchange){
+        let _this = this
+        return new Promise((resolve, reject)=>{
+            if(_this.db){            
+                _this.db.collection(market + '-transfers-' + exchange).createIndex({"id": -1}, {unique: true})
+                resolve(true)
+            }else{
+                logger.warn('CreateTransfersDB promise reject, no db object')
+                reject(false)
+            }
+        })
+    }
+
+
+    /**
+     * 
+     * @param {*} market string - crypto marekt name eg ETH-USD
+     * @param {*} exchange string - exchange name all lowercase eg coinbase, gemini, binance 
+     */
+    CreateOrderBookDB(market, exchange){
 
     }
 
@@ -109,13 +138,16 @@ class MongoTools {
      * get flat id from file for market
      * @param {String} market 
      */
-    get_id_from_JSON(market){
+    Get_FlatID(market){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
                 let col = market + "-flatid"
                 _this.db.collection(col).find().sort( {$natural: -1}).limit(1).toArray( function (err, result) {                 
-                    if (err) { reject() }
+                    if (err) { 
+                        logger.error('Get_FlatID DB error', err)
+                        reject() 
+                    }
                     else{
                        // console.log(result[0].flatid)
                         resolve(result[0].flatid)
@@ -124,6 +156,7 @@ class MongoTools {
 
             }catch(e){
                 console.log(e)
+                logger.error('Get_FlatID error', err)
                 reject()
             }
         })
@@ -134,7 +167,7 @@ class MongoTools {
      * @param {Number} lastflatid 
      * @param {String} market 
      */
-    write_ID_to_JSON(lastflatid, market){
+    Write_FlatID(lastflatid, market){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
@@ -149,6 +182,7 @@ class MongoTools {
                     //   assert.equal(1, result);
                     console.log(result)
                     if(err){
+                        logger.error()
                         console.log('write flat id error', err)
                         return reject()
                     }
@@ -276,8 +310,9 @@ class MongoTools {
                 // canceled_at:null
                 // completed_at:"2018-07-23 17:25:22.470562+00"
                 // created_at:"2018-07-23 17:25:22.058177+00"
-                // details:Object {sent_to_address: "0xa48cf6d0E4Fe076EEBf3785A847aE2EaadbF40a1", coinbase_account_id: "55abb266-f788-55fc-bede-2efa054e705e",            coinbase_withdrawal_id: "7ecdc99a-e205-5f4f-9482-4c0c95f7f806", …}
-                // id:"4e294aac-496c-4ea9-a5fd-68b75e50cc86"
+                // details:Object {sent_to_address: "some address", 
+                // coinbase_withdrawal_id: "somehashs", …}
+                // id:"id hash"
                 // processed_at:"2018-07-23 17:27:16.318233+00"
                 // type:"withdraw"
                 // user_nonce:null
@@ -389,13 +424,13 @@ class MongoTools {
             try{
                          // fee:"none"
                         // flat_id:29665533
-                        // maker_order_id:"456018d9-97e6-4324-ba8c-dbd942d315c1"
+                        // maker_order_id:"order id hash"
                         // order_id:"none"
                         // price:"53.14000000"
                         // product_id:"LTC-USD"
                         // side:"buy"
                         // size:"0.10000000"
-                        // taker_order_id:"948fd486-a2ee-427d-bbb7-02f5662bee0a"
+                        // taker_order_id:"taker id hash"
                         // time:"2018-11-05T01:43:29.179000Z"
                         // trade_id:34715651       
                 const collection = _this.db.collection(market)
@@ -447,8 +482,8 @@ class MongoTools {
                 //     "_id" : ObjectId("5d154560834c1d3510c8bcc8"),
                 //     "type" : "match",
                 //     "trade_id" : 67825293,
-                //     "maker_order_id" : "8fcbf3f3-d5c4-4b4f-827d-94d9a129a42a",
-                //     "taker_order_id" : "037cb31e-9349-45c4-b84a-ccb65355fc1c",
+                //     "maker_order_id" : "maker order id hash",
+                //     "taker_order_id" : "taker order id hash",
                 //     "side" : "sell",
                 //     "size" : "1.05475107",
                 //     "price" : "10999.00000000",
