@@ -2,7 +2,7 @@ const internet = require('../helper/checkinternet')
 const logger = require('../helper/logger')
 const Mongo = require('../database/mongo')
 const db = new Mongo()
-const sleep = require('./helper/sleep')
+const sleep = require('../helper/sleep')
 
 
 class Engine {

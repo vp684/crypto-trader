@@ -19,11 +19,11 @@ try{
     });
 
     //start express server
-    app.listen(port, () => console.log(`app listening at http://localhost:${port}`))
+    app.listen(port, () => console.log(`server started at http://localhost:${port}`))
 
 }
 catch(e){
-    console.log(e)
+    logger.error('express route error', e)
 }
 
 
