@@ -1,48 +1,39 @@
-const GeminiAPI = require('gemini-api').default
-require('dotenv').config()
 
 
 
-const websocketClient = new GeminiAPI.WebsocketClient({ key: process.env.GEM_KEY, secret: process.env.GEM_SEC, sandbox: false });
+const logger = require('./helper/logger')
+const express = require('express')
 
-const api = new GeminiAPI({key: process.env.GEM_KEY, secret:  process.env.GEM_SEC})
 
-websocketClient.openMarketSocket('btcusd', () => {
-    websocketClient.addMarketMessageListener(data => {
-       // console.log(data)
+const app = express()
+const port = 5000
 
-        if(data.events[0].type === 'trade'){
-           // console.log(data)
-        }       
+const main_engine = require('./engine/main')
+//const engine = new main_engine()
+
+
+try{
+    //routes       
+    app.get('/start', (req, res) => {
+        res.send({ express: 'BACKEND IS CONNECTED TO REACT' });
     });
-   
+
+    //start express server
+    app.listen(port, () => console.log(`app listening at http://localhost:${port}`))
+
+}
+catch(e){
+    console.log(e)
+}
+
+
+process
+  .on('unhandledRejection', (reason, p) => {
+    console.error(reason, 'Unhandled Rejection at Promise', p);
+    logger.error('Unhandled Rejection at Promise', p, reason)
+  })
+  .on('uncaughtException', err => {
+    console.error(err, 'Uncaught Exception thrown');
+    logger.error('uncaught exception', err)
+    process.exit(1);
 });
-
-
-websocketClient.openOrderSocket((data)=>{
-  //  console.log(data)
-    websocketClient.addOrderMessageListener(_data => {
-        console.log(typeof _data, _data)
-
-
-        // if(Array.isArray(_data) && _data[0].type === 'accepted'){
-        //     setTimeout(()=>{
-        //         api.cancelOrder(_data[0].order_id)
-        //     }, 2000)
-        // }
-    })
-})  
-
-
-
-setTimeout(()=>{
-    api.newOrder({
-        "symbol": "btcusd", 
-        "amount": "0.005", 
-        "price": "6915.00",
-        "side": "buy"
-    })
-
-   // api.getNotionalVolume()
-
-}, 5000)
