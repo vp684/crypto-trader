@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { makeStyles, useTheme } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 
 
@@ -23,7 +23,6 @@ const useStyles = makeStyles((theme) => ({
 
 export default function Main(){
     const classes = useStyles();
-    const theme = useTheme();
     return(
        
         <main className={classes.content}>
