@@ -8,13 +8,17 @@ const api = new GeminiAPI({key: process.env.GEMINI_KEY, secret:  process.env.GEM
 
 class Gemini_REST{
     constructor(){
-
+        this.
     }
 
-    async rateLimiter(){
+    async publicLimiter(){
 
 
         await sleep(50)
+    }
+
+    async privateLimiter(){
+        
     }
 }
 
