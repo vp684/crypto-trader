@@ -61,7 +61,7 @@ class Engine {
                     }
                     _this.internetout = true       
                                                   
-                    console.log('cant reach coinbase api')
+                    console.log('cant reach internet')
                     await sleep.sleep(2000).catch(error=>{
                         console.log(error)
                     })                    
