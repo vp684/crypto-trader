@@ -9,7 +9,7 @@ const app = express()
 const port = 5000
 
 const main_engine = require('./trader/main')
-//const engine = new main_engine()
+const engine = new main_engine()
 
 
 try{

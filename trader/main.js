@@ -3,7 +3,8 @@ const logger = require('../helper/logger')
 const Mongo = require('../database/mongo')
 const db = new Mongo()
 const sleep = require('../helper/sleep')
-
+const Gemini_REST = require('./exchanges/gemini/gemini_rest')
+const GemRest = new Gemini_REST()
 
 class Engine {
     constructor(){
