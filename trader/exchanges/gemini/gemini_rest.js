@@ -31,17 +31,15 @@ class Gemini_REST{
                         this.last_public_call = curtime
                         this.publicQue[i].func()
                         this.publicQue.splice(i, 1)
-                    }
-                                        
+                    }                                        
                 }
-
             }
-            await sleep(10) //  time to check between calls that fail to meet min delay  
+            await sleep(20) //  time to check between calls that fail to meet min delay  
             this.publicLimiter()       
         }
         catch(e){
            logger.error('Gemini REST public limiter error', e)
-            await sleep(10)
+            await sleep(20)
             this.publicLimiter() 
         }
       
