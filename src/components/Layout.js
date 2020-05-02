@@ -148,6 +148,10 @@ export default function LayOut() {
               <ListItemIcon><PowerSettingsNewIcon /></ListItemIcon>
               <ListItemText primary='Start / Stop' />
             </ListItem>
+            <ListItem button>
+              <ListItemIcon><PowerSettingsNewIcon /></ListItemIcon>
+              <ListItemText primary='Exchanges' />
+            </ListItem>
         </List>     
       </Drawer>
 

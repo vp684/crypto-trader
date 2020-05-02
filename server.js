@@ -18,6 +18,11 @@ try{
         res.send({ express: 'BACKEND IS CONNECTED TO REACT' });
     });
 
+    app.get('/add-exchange', (req, res) => {
+        console.log(req)
+        res.send({data: `successfully added exchange`})
+    })
+
     //start express server
     app.listen(port, () => console.log(`server started at http://localhost:${port}`))
 

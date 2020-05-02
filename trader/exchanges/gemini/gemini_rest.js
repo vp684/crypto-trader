@@ -75,7 +75,7 @@ class Gemini_REST{
 
     }
 
-    sendOrder(market, qty, price, side){
+    newOrder(market, qty, price, side){
 
         api.newOrder({
             "symbol": "btcusd", 
@@ -83,6 +83,17 @@ class Gemini_REST{
             "price": "6915.00",
             "side": "buy"
         })
+
+    }
+
+    /**
+     * 
+     * @param {object} message object containt properties exchange, call, data
+     */
+    orderUEI(message){
+        if(message.call == 'newOrder'){
+
+        }
 
     }
 }
