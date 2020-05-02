@@ -3,7 +3,8 @@ import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import { Route } from "react-router-dom";
-import Exchanges from "./exchanges/Exchanges"
+import ExchangeCard from "./ExchangeCard"
+
 
 
 const useStyles = makeStyles((theme) => ({
@@ -22,15 +23,13 @@ const useStyles = makeStyles((theme) => ({
    
 }));
 
-export default function Main(){
+export default function Exchanges(){
     const classes = useStyles();
     return(
        
-        <main className={classes.content}>
-            <div className={classes.main} />
-            <Route exact path="/exchanges" render={props => <Exchanges {...props} />} />
-
-        </main>
+        <div>          
+            <ExchangeCard />
+        </div>
       
     )
 }
