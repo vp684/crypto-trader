@@ -31,11 +31,11 @@ try{
             if(prom_res){
               res.send({data: `successfully added exchange`})
               return
+            }else{
+              res.send({data: 'failed to add exchange'})
+              return
             }
             
-          }).catch(e => {
-            res.send({data: 'failed to add exchange'})
-            return
           })
         }else{
           res.send({data: 'invalid exchange'})
