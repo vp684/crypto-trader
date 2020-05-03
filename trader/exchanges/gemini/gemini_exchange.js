@@ -2,7 +2,17 @@
 
 class GeminiExchange {
         constructor(){
-              this.markets = []                  
+              this.markets = []                 
+              this.exchange = 'gemini'
+              this.init = this.init.bind(this)
+              this.init()
+              this.websocket = null
+        }
+
+
+
+        init(){
+            console.log(this.exchange)
         }
 
         /**
@@ -12,6 +22,9 @@ class GeminiExchange {
         addMarket(market){
                 
         }
+
+
+
 
 }
 

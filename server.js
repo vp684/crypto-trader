@@ -24,7 +24,7 @@ try{
     });
 
     app.post('/toggle-exchange', async (req, res) => {
-        let ex = req.body.exchange ? req.body.exchange : null
+        let ex = req.body.exchange ? req.body.exchange : false
         let message = { data: 'invalid exchange'}
         if(ex){
           await engine.createExchange(ex).then(prom_res => {
