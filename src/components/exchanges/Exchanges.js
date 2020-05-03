@@ -11,8 +11,9 @@ const useStyles = makeStyles((theme) => ({
   main: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    padding: theme.spacing(0, 1),
+    justifyContent: 'center',
+    padding: theme.spacing(2, 1),
+
     // necessary for content to be below app bar
     ...theme.mixins.toolbar,
   },
@@ -27,8 +28,8 @@ export default function Exchanges(){
     const classes = useStyles();
     return(
        
-        <div>          
-            <ExchangeCard />
+        <div >          
+            <ExchangeCard name="Gemini"/>           
         </div>
       
     )

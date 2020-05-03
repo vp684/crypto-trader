@@ -3,6 +3,7 @@
 
 const logger = require('./helper/logger')
 const express = require('express')
+var bodyParser = require('body-parser')
 
 
 const app = express()
@@ -14,13 +15,33 @@ const engine = new main_engine()
 
 try{
     //routes       
+    app.use(bodyParser.urlencoded({ extended: true }))
+    app.use(bodyParser.json())
+
     app.get('/start', (req, res) => {
+      
         res.send({ express: 'BACKEND IS CONNECTED TO REACT' });
     });
 
-    app.get('/add-exchange', (req, res) => {
-        console.log(req)
-        res.send({data: `successfully added exchange`})
+    app.post('/toggle-exchange', async (req, res) => {
+        let ex = req.body.exchange ? req.body.exchange : null
+        let message = { data: 'invalid exchange'}
+        if(ex){
+          await engine.createExchange(ex).then(prom_res => {
+            if(prom_res){
+              res.send({data: `successfully added exchange`})
+              return
+            }
+            
+          }).catch(e => {
+            res.send({data: 'failed to add exchange'})
+            return
+          })
+        }else{
+          res.send({data: 'invalid exchange'})
+        }
+       
+
     })
 
     //start express server

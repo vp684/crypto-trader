@@ -10,7 +10,8 @@ import { Redirect } from 'react-router-dom';
 const useStyles = makeStyles({
   root: {
     minWidth: 100,
-    maxWidth: 350
+    maxWidth: 350, 
+    margin: 10
   },
   bullet: {
     display: 'inline-block',
@@ -29,31 +30,38 @@ const useStyles = makeStyles({
   }
 });
 
-export default function ExchangeCard() {
+export default function ExchangeCard(props) {
   const classes = useStyles();
-  const bull = <span className={classes.bullet}>•</span>;
+
+  const ex_name = props.name
 
   const toggleExchange = async () =>{
-   
+    let data = { 'exchange': ex_name.toLowerCase() }
+    
+    const response = await fetch('/toggle-exchange', {
+        method:'POST', 
+        headers:{
+            'Content-Type': 'application/json'
+        }, 
+        body: JSON.stringify(data)
+    });
+    const body = await response.json();
+
+    if (response.status !== 200) {
+      throw Error(body.message) 
+    }
+    console.log(body)
 
   }
 
   return (
     <Card className={classes.root}>
-      <CardContent>
-        <Typography className={classes.title} color="textSecondary" gutterBottom>
-          Word of the Day
-        </Typography>
+      <CardContent>     
         <Typography variant="h5" component="h2">
-          be{bull}nev{bull}o{bull}lent
-        </Typography>
-        <Typography className={classes.pos} color="textSecondary">
-          adjective
-        </Typography>
+            {ex_name}
+        </Typography>       
         <Typography variant="body2" component="p">
-          well meaning and kindly.
-          <br />
-          {'"a benevolent smile"'}
+          REST and Websocket API        
         </Typography>
       </CardContent>
       <CardActions>

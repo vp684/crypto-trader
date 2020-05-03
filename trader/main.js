@@ -9,17 +9,19 @@ class Engine {
     constructor(){
         this.init()
         this.internetout = true
-        this.exhanges = []
+        this.exchanges = []
+
+        this.createExchange = this.createExchange.bind(this);
         
     }
 
     async init(){
-        internet.checkInternet((val) =>{        
-            db.connectDB().catch( err =>{
-                console.log(err)
-                logger.error('db connection error', err)
-            })
-        })
+        // internet.checkInternet((val) =>{        
+        //     db.connectDB().catch( err =>{
+        //         console.log(err)
+        //         logger.error('db connection error', err)
+        //     })
+        // })
 
     }
 
@@ -50,7 +52,7 @@ class Engine {
                         _this.start()
                     }else{
                         _this.internetout = false
-                        _this.engineCycle() // runs engine logic once
+                        _this.mainLoop() // runs engine logic once
                     }
                     
                    
@@ -85,16 +87,33 @@ class Engine {
      * gather active markets per exchange
      * initiate 
      */
-    MainLoop(){
+    mainLoop(){
 
     }
 
     createExchange(name){
-        switch(name){
-            case 'gemini':
-                let gemEx = new GeminiExchange()
-                this.exchanges.push(gemEx)                
-        }
+        return new Promise((resolve, reject) => {    
+            let index = 0 
+            this.exchanges.forEach(ex => {
+                if(ex.name == name){
+                    index = 1
+                }
+            })
+
+            if(!index){                
+                switch(name){
+                    case 'gemini':
+                        let gemEx = new GeminiExchange()                                                
+                        this.exchanges.push({ name: 'gemini', exchange: gemEx})   
+                        resolve(true)
+                        break;                                                         
+                }
+            }else{
+                resolve(false)
+            }
+           
+        })
+        
     }
 
 
