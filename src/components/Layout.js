@@ -99,10 +99,8 @@ export default function LayOut() {
     
   }
 
-  const handleRoute = (link, e) => {
-    
+  const handleRoute = (link, e) => {    
     history.push(link)
-
   }
 
   return (
