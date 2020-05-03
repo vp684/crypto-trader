@@ -1,5 +1,6 @@
 import React from 'react';
 import clsx from 'clsx';
+import { useHistory } from "react-router-dom";
 import { makeStyles, useTheme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
 import AppBar from '@material-ui/core/AppBar';
@@ -74,6 +75,7 @@ const useStyles = makeStyles((theme) => ({
 export default function LayOut() {
   const classes = useStyles();
   const theme = useTheme();
+  let history = useHistory()
   
   const [open, setOpen] = React.useState(true);
 
@@ -85,7 +87,7 @@ export default function LayOut() {
     setOpen(false);
   };
 
-  const serverToggle = async ()=> {
+  const serverToggle = async () => {
 
     const response = await fetch('/start');
     const body = await response.json();
@@ -95,6 +97,12 @@ export default function LayOut() {
     }
     console.log(body)
     
+  }
+
+  const handleRoute = (link, e) => {
+    
+    history.push(link)
+
   }
 
   return (
@@ -148,9 +156,9 @@ export default function LayOut() {
               <ListItemIcon><PowerSettingsNewIcon /></ListItemIcon>
               <ListItemText primary='Start / Stop' />
             </ListItem>
-            <ListItem button>
+            <ListItem button onClick={() => handleRoute('/exchanges')}>
               <ListItemIcon><PowerSettingsNewIcon /></ListItemIcon>
-              <ListItemText primary='Exchanges' />
+              <ListItemText primary="Exchanges"/>
             </ListItem>
         </List>     
       </Drawer>
