@@ -9,31 +9,39 @@ class Gemini_Websocket{
         this.ws = new GeminiAPI.WebsocketClient({ key: process.env.GEMINI_KEY, secret: process.env.GEMINI_SECRET, sandbox: false });
 
         this.init = this.init.bind(this)
+        this.initialized = false
+        this.init()
     }
 
 
 
     init(){
+        this.initialized = true
         this.openMarketSocket('btcusd')
         this.openOrderSocket()
     }
 
-    openMarketSocket(){
-        this.ws.openMarketSocket(market, () => {
-            this.ws.addMarketMessageListener(data => {
-                console.log(data)
+    openMarketSocket(market){
+        if(!this.initialized){
+            this.ws.openMarketSocket(market, () => {
+                this.ws.addMarketMessageListener(data => {
+                   // console.log(data)
+                })
             })
-        })
+        }
+        
     }
 
     openOrderSocket(){
-        this.ws.openOrderSocket( data => {
-            console.log('data', data)
-            this.ws.addOrderMessageListener( _data => {
-                console.log('_data', _data)
+        if(!this.initialized){
+            this.ws.openOrderSocket( data => {
+                console.log('data', data)
+                this.ws.addOrderMessageListener( _data => {
+                    //console.log('_data', _data)
+                })
             })
-        })
-
+        }
+        
     }
     
 

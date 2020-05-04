@@ -1,4 +1,4 @@
-
+const G_WS = require('./gemini_ws')
 
 class GeminiExchange {
         constructor(){
@@ -6,7 +6,7 @@ class GeminiExchange {
               this.exchange = 'gemini'
               this.init = this.init.bind(this)
               this.init()
-              this.websocket = null
+              this.websocket = new G_WS()
         }
 
 
