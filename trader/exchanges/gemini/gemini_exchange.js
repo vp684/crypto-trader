@@ -7,6 +7,9 @@ class GeminiExchange {
               this.init = this.init.bind(this)
               this.init()
               this.websocket = new G_WS()
+              this.books = {
+                    
+              }
         }
 
 

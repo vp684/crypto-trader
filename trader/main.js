@@ -46,28 +46,28 @@ class Engine {
         try{
             internet.checkInternet(async function checkNet(result){
                 if(result){
-                    if(_this.internetout){
-                        _this.internetout = false
+                    if(this.internetout){
+                        this.internetout = false
                         console.log('INERNET BACK ONLINE - calling engine.start')                        
-                        _this.start()
+                        this.start()
                     }else{
-                        _this.internetout = false
-                        _this.mainLoop() // runs engine logic once
+                        this.internetout = false
+                        this.mainLoop() // runs engine logic once
                     }
                     
                    
                 }else{
-                    if(!_this.internetout){
+                    if(!this.internetout){
                         console.log('INERNET DROPPED OUT - calling engine.stop')
-                        _this.stop() 
+                        this.stop() 
                     }
-                    _this.internetout = true       
+                    this.internetout = true       
                                                   
                     console.log('cant reach internet')
                     await sleep.sleep(2000).catch(error=>{
                         console.log(error)
                     })                    
-                    _this.enginePreCheck()
+                    this.enginePreCheck()
                 }
             })
 
@@ -90,7 +90,11 @@ class Engine {
     mainLoop(){
 
     }
-
+    
+    /**
+     * 
+     * @param {String} name Creates and exchange object for trading.  coinbase, gemini, or binance.
+     */
     createExchange(name){
         return new Promise((resolve, reject) => {    
             let index = 0 
