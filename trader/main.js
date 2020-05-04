@@ -7,22 +7,24 @@ const GeminiExchange = require('./exchanges/gemini/gemini_exchange')
 
 class Engine {
     constructor(){
-        this.init()
-        this.internetout = true
+      
+        this.internet = false
         this.exchanges = []
 
         this.createExchange = this.createExchange.bind(this);
-        
+        this.enginePreCheck = this.enginePreCheck.bind(this)
+
+        this.init()
     }
 
     async init(){
-        // internet.checkInternet((val) =>{        
-        //     db.connectDB().catch( err =>{
-        //         console.log(err)
-        //         logger.error('db connection error', err)
-        //     })
+        //connect to database
+        
+        // db.connectDB().catch( err =>{
+        //     console.log(err)
+        //     logger.error('db connection error', err)
         // })
-
+       
     }
 
     async start(){
@@ -46,28 +48,28 @@ class Engine {
         try{
             internet.checkInternet(async function checkNet(result){
                 if(result){
-                    if(this.internetout){
-                        this.internetout = false
+                    if(_this.internetout){
+                        _this.internetout = false
                         console.log('INERNET BACK ONLINE - calling engine.start')                        
-                        this.start()
+                    
                     }else{
-                        this.internetout = false
-                        this.mainLoop() // runs engine logic once
+                        _this.internetout = false
+                     
                     }
                     
                    
                 }else{
-                    if(!this.internetout){
+                    if(!_this.internetout){
                         console.log('INERNET DROPPED OUT - calling engine.stop')
-                        this.stop() 
+                      
                     }
-                    this.internetout = true       
+                    _this.internetout = true       
                                                   
                     console.log('cant reach internet')
-                    await sleep.sleep(2000).catch(error=>{
+                    await sleep.sleep(5000).catch(error=>{
                         console.log(error)
                     })                    
-                    this.enginePreCheck()
+                    _this.enginePreCheck()
                 }
             })
 
@@ -80,16 +82,7 @@ class Engine {
 
     }
 
-    /**
-     * Main loop to run after internet check
-     * 
-     * Gather active exchanges
-     * gather active markets per exchange
-     * initiate 
-     */
-    mainLoop(){
 
-    }
     
     /**
      * 
@@ -118,6 +111,16 @@ class Engine {
            
         })
         
+    }
+
+    checkInternet(){
+        internet.checkInternet((val) =>{ 
+            console.log('internet:', val)      
+            
+            
+            this.internet = val
+          
+        })
     }
 
 
