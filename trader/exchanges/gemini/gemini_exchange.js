@@ -1,5 +1,5 @@
-const G_WS = require('./gemini_ws')
-const Market = require('../../market/market')
+
+const Market = require('./gemini_market')
 const settings = require('./gemini_settings')
 
 class GeminiExchange {
@@ -31,9 +31,7 @@ class GeminiExchange {
                 }
             }
             if(index !== -1){
-                let ws = new G_WS()
-                let mrk = new Market(market, ws)
-                mrk.init()
+                let mrk = new Market(market)      
                 this.markets[market] = mrk
 
             }

@@ -1,21 +1,29 @@
 
 
 class Market {
-    constructor(symbol, ws){
+    constructor(symbol, ws, exchange){
 
         this.symbol = symbol
         this.ws = ws.websocket
-        this.orderbook = null        
+        this.obMgr = null
+        this.exchange = exchange
+        this.init()        
     }
 
     init(){
-        this.marketListener()
-        
+        switch(this.exchange){
+            case 'gemini':               
+                let obmanager = require('../exchanges/gemini/gemini_orderbook_mgr')
+                this.obMgr = new obmanager(this.symbol)
+
+        }
+
     }
 
     marketListener(){
-        this.ws.openMarketSocket(this.symbol, (market) => {
-            console.log(market)
+        this.ws.openMarketSocket(this.symbol, (event) => {
+            console.log(event)
+
             this.ws.addMarketMessageListener((data) => {
                 console.log(data, market.target.url)
             })
@@ -23,7 +31,7 @@ class Market {
     }
 
     mainLoop(){
-
+        
     }
 
     
