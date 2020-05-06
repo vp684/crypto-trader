@@ -24,7 +24,7 @@ class Engine {
         //     console.log(err)
         //     logger.error('db connection error', err)
         // })
-       
+       this.start()
     }
 
     async start(){
