@@ -3,27 +3,53 @@
 
 const logger = require('./helper/logger')
 const express = require('express')
+var bodyParser = require('body-parser')
 
 
 const app = express()
 const port = 5000
 
-const main_engine = require('./engine/main')
-//const engine = new main_engine()
+const main_engine = require('./trader/main')
+const engine = new main_engine()
 
 
 try{
     //routes       
+    app.use(bodyParser.urlencoded({ extended: true }))
+    app.use(bodyParser.json())
+
     app.get('/start', (req, res) => {
+      
         res.send({ express: 'BACKEND IS CONNECTED TO REACT' });
     });
 
+    app.post('/toggle-exchange', async (req, res) => {
+        let ex = req.body.exchange ? req.body.exchange : false
+        let message = { data: 'invalid exchange'}
+        if(ex){
+          await engine.createExchange(ex).then(prom_res => {
+            if(prom_res){
+              res.send({data: `successfully added exchange`})
+              return
+            }else{
+              res.send({data: 'failed to add exchange'})
+              return
+            }
+            
+          })
+        }else{
+          res.send({data: 'invalid exchange'})
+        }
+       
+
+    })
+
     //start express server
-    app.listen(port, () => console.log(`app listening at http://localhost:${port}`))
+    app.listen(port, () => console.log(`server started at http://localhost:${port}`))
 
 }
 catch(e){
-    console.log(e)
+    logger.error('express route error', e)
 }
 
 

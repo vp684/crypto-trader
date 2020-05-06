@@ -1,5 +1,6 @@
 import React from 'react';
 import clsx from 'clsx';
+import { useHistory } from "react-router-dom";
 import { makeStyles, useTheme } from '@material-ui/core/styles';
 import Drawer from '@material-ui/core/Drawer';
 import AppBar from '@material-ui/core/AppBar';
@@ -15,8 +16,6 @@ import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
-import InboxIcon from '@material-ui/icons/MoveToInbox';
-import MailIcon from '@material-ui/icons/Mail';
 import PowerSettingsNewIcon from '@material-ui/icons/PowerSettingsNew';
 import Main from './Main'
 
@@ -76,6 +75,7 @@ const useStyles = makeStyles((theme) => ({
 export default function LayOut() {
   const classes = useStyles();
   const theme = useTheme();
+  let history = useHistory()
   
   const [open, setOpen] = React.useState(true);
 
@@ -87,7 +87,7 @@ export default function LayOut() {
     setOpen(false);
   };
 
-  const serverToggle = async ()=> {
+  const serverToggle = async () => {
 
     const response = await fetch('/start');
     const body = await response.json();
@@ -97,6 +97,10 @@ export default function LayOut() {
     }
     console.log(body)
     
+  }
+
+  const handleRoute = (link, e) => {    
+    history.push(link)
   }
 
   return (
@@ -149,6 +153,10 @@ export default function LayOut() {
           <ListItem button onClick={serverToggle}>
               <ListItemIcon><PowerSettingsNewIcon /></ListItemIcon>
               <ListItemText primary='Start / Stop' />
+            </ListItem>
+            <ListItem button onClick={() => handleRoute('/exchanges')}>
+              <ListItemIcon><PowerSettingsNewIcon /></ListItemIcon>
+              <ListItemText primary="Exchanges"/>
             </ListItem>
         </List>     
       </Drawer>
