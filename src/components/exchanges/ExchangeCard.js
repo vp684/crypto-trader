@@ -5,7 +5,7 @@ import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
-import { Redirect } from 'react-router-dom';
+import { useHistory } from "react-router-dom";
 
 const useStyles = makeStyles({
   root: {
@@ -32,6 +32,7 @@ const useStyles = makeStyles({
 
 export default function ExchangeCard(props) {
   const classes = useStyles();
+  let history = useHistory()
 
   const ex_name = props.name
 
@@ -50,8 +51,14 @@ export default function ExchangeCard(props) {
     if (response.status !== 200) {
       throw Error(body.message) 
     }
-    console.log(body)
+    
 
+  }
+
+  const handleUrl = (exName) =>{
+    let exchange = exName.toLowerCase()
+    let link = `/markets/${exchange}`
+    history.push(link)
   }
 
   return (
@@ -66,7 +73,9 @@ export default function ExchangeCard(props) {
       </CardContent>
       <CardActions>
         <Button size="small" className={classes.toggle} onClick={toggleExchange} >On / Off</Button>
+        <Button size='small' onClick={() =>{handleUrl(ex_name)}}>Markets</Button>
         <Button size="small">Settings</Button>
+        
       </CardActions>
     </Card>
   );

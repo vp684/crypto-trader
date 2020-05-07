@@ -38,6 +38,14 @@ class GeminiExchange {
                 
         }
 
+        getMarkets(){
+            let markets = []
+            for(let mrk in this.markets){               
+                markets.push(mrk)
+            }
+            return markets
+        }
+
 
 
 

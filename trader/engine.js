@@ -2,18 +2,18 @@ const internet = require('../helper/checkinternet')
 const logger = require('../helper/logger')
 const Mongo = require('../database/mongo')
 const db = new Mongo()
-const sleep = require('../helper/sleep')
+const sleep = require('../helper/sleep').sleep
 const GeminiExchange = require('./exchanges/gemini/gemini_exchange')
 
 class Engine {
     constructor(){
       
-        this.internet = false
+        this.internetout = true
         this.exchanges = []
 
         this.createExchange = this.createExchange.bind(this);
         this.enginePreCheck = this.enginePreCheck.bind(this)
-
+        this.socket = null
         this.init()
     }
 
@@ -51,22 +51,23 @@ class Engine {
                     if(_this.internetout){
                         _this.internetout = false
                         console.log('INERNET BACK ONLINE - calling engine.start')                        
-                    
+                        //restart logic
+                        _this.enginePreCheck()
                     }else{
-                        _this.internetout = false
-                     
+                        _this.internetout = false                       
+                        _this.mainCycle()
                     }
                     
                    
                 }else{
                     if(!_this.internetout){
                         console.log('INERNET DROPPED OUT - calling engine.stop')
-                      
+                        //clear markets internet lost need to reset everything
                     }
                     _this.internetout = true       
                                                   
                     console.log('cant reach internet')
-                    await sleep.sleep(5000).catch(error=>{
+                    await sleep(5000).catch(error=>{
                         console.log(error)
                     })                    
                     _this.enginePreCheck()
@@ -80,6 +81,17 @@ class Engine {
             _this.enginePreCheck()
         }
 
+    }
+
+    async mainCycle(){
+        if(this.internetout) return
+
+        for(let ex in this.exchanges){
+            console.log(ex)
+        }
+
+        await sleep(5000)
+        this.enginePreCheck() 
     }
 
 
@@ -113,14 +125,35 @@ class Engine {
         
     }
 
-    checkInternet(){
-        internet.checkInternet((val) =>{ 
-            console.log('internet:', val)      
-            
-            
-            this.internet = val
-          
+    getMarkets(exchange){
+        return new Promise((resolve, reject) =>{
+            let index = 0 
+            let markets = []  
+            if(!index){                
+                switch(exchange){
+                    case 'gemini':                                                                 
+                        this.exchanges.forEach(ex => {
+                            if(ex.name == exchange){
+                                this.exchanges.forEach(element => {
+                                    if(element.name === exchange){
+                                        markets = element.exchange.getMarkets()
+                                    }
+                                });
+                                
+                            }
+                        })
+                        resolve(markets)
+                        break;                                                         
+                }
+            }else{
+                resolve(markets)
+            }
         })
+    }
+   
+
+    setClientSocket(socket){
+        this.socket = socket
     }
 
 

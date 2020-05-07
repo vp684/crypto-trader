@@ -4,6 +4,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { Route } from "react-router-dom";
 import Exchanges from "./exchanges/Exchanges"
 import io from 'socket.io-client'
+import AllMarkets from './markets/AllMarkets'
 
 
 const useStyles = makeStyles((theme) => ({
@@ -31,10 +32,7 @@ export default function Main(){
         console.log('client socket connect')
         
       })
-
-      socket.on('news', (msg)=>{
-        console.log(msg)
-      })
+     
     }, [])
 
     const classes = useStyles();
@@ -43,7 +41,7 @@ export default function Main(){
         <main className={classes.content}>
             <div className={classes.main} />
             <Route exact path="/exchanges" render={props => <Exchanges {...props} />} />
-
+            <Route path="/markets/:id" render={props => <AllMarkets {...props}/>} />
         </main>
       
     )
