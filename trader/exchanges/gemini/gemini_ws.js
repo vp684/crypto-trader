@@ -1,6 +1,7 @@
 const GeminiAPI = require('gemini-api-vp').default
 require('dotenv').config()
 
+
 class Gemini_Websocket{
     constructor(symbol){
         this.ws = new GeminiAPI.WebsocketClient({ key: process.env.GEMINI_KEY, secret: process.env.GEMINI_SECRET, sandbox: false });
@@ -37,8 +38,7 @@ class Gemini_Websocket{
                 
             })
         })
-        
-        
+                
     }
 
     openOrderSocket(){
