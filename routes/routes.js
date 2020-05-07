@@ -23,7 +23,7 @@ routes = (app) =>{
 
 
     io.on('connection', function (socket) {
-        engine.setClientSocket(socket)
+       // engine.setClientSocket(socket)
         console.log('socket connected')
 
         socket.emit('news', { hello: 'world' });

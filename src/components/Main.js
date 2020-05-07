@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
 import { Route } from "react-router-dom";
 import Exchanges from "./exchanges/Exchanges"
+import io from 'socket.io-client'
 
 
 const useStyles = makeStyles((theme) => ({
@@ -22,7 +22,21 @@ const useStyles = makeStyles((theme) => ({
    
 }));
 
+const socket = io('http://localhost:8000')
+
 export default function Main(){
+    
+    useEffect( () => {
+      socket.on('connect', function(){
+        console.log('client socket connect')
+        
+      })
+
+      socket.on('news', (msg)=>{
+        console.log(msg)
+      })
+    }, [])
+
     const classes = useStyles();
     return(
        
