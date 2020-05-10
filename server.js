@@ -5,11 +5,22 @@ const logger = require('./helper/logger')
 const express = require('express')
 var bodyParser = require('body-parser')
 
+const socketIo = require('socket.io')
+const http = require('http')
+
+
+
 
 const app = express()
 const port = 5000
 
-const routes = require('./routes/routes')(app)
+
+const server = http.Server(app);
+const io = socketIo(server);
+const ioport = 8000
+server.listen(ioport);
+
+const routes = require('./routes/routes')(app, io)
 
 
 

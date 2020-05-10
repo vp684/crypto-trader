@@ -1,42 +1,40 @@
 
 import React, {useState, useEffect }from 'react';
-import Card from '@material-ui/core/Card';
-import CardActions from '@material-ui/core/CardActions';
-import CardContent from '@material-ui/core/CardContent';
-import Typography from '@material-ui/core/Typography';
-import { makeStyles } from '@material-ui/core/styles';
-import Markets from './Market'
-
-const useStyles = makeStyles({
+//import { makeStyles } from '@material-ui/core/styles';
+import Markets from './Markets'
+import io from 'socket.io-client'
+// const useStyles = makeStyles({
     
-    root: {
-      minWidth: 100,
-      maxWidth: 350, 
-      margin: 10
-    },
-    bullet: {
-      display: 'inline-block',
-      margin: '0 2px',
-      transform: 'scale(0.8)',
-    },
-    title: {
-      fontSize: 14,
-    },
-    pos: {
-      marginBottom: 12,
-    },
+//     root: {
+//       minWidth: 100,
+//       maxWidth: 350, 
+//       margin: 10
+//     },
+//     bullet: {
+//       display: 'inline-block',
+//       margin: '0 2px',
+//       transform: 'scale(0.8)',
+//     },
+//     title: {
+//       fontSize: 14,
+//     },
+//     pos: {
+//       marginBottom: 12,
+//     },
   
-    toggle: {
-        backgroundColor: 'Red'
-    }
-  });
+//     toggle: {
+//         backgroundColor: 'Red'
+//     }
+//   });
 
 export default function AllMarkets(props){
-    const classes = useStyles();
+   // const classes = useStyles();
     const exchange = props.match.params.id
     const [markets, setMarkets] = useState([])
-    
-    const loadMarkets = async () =>{
+
+
+    useEffect(() => {
+      const loadMarkets = async () =>{
         let data = { 'exchange': exchange }
     
         const response = await fetch('/getmarkets', {
@@ -47,17 +45,23 @@ export default function AllMarkets(props){
             body: JSON.stringify(data)
         });
         const body = await response.json();
-        setMarkets(body)
+     
         if (response.status !== 200) {
             throw Error(body.message) 
         }
-    }
 
-    useEffect(() => {
-        loadMarkets()       
-    }, [])   
+        setMarkets(body)
+
+        
+
+      }
+          
+      loadMarkets()    
+      
+      
+    }, [exchange])   
             
     return(       
-        <Markets markets={markets}/>      
+        <Markets markets={markets} socket={props.socket}/>      
     )
 }

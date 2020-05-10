@@ -43,7 +43,7 @@ class MongoTools {
                             }
                             if(database){
                         
-                                _this.db = database.db('Crypto-Data');                            
+                                _this.db = database.db('CryptoData');                            
                                 // _this.db.collection('ETH-USD').createIndex({ "trade_id": -1 }, { unique: true })
                                 // _this.db.collection('BTC-USD').createIndex({ "trade_id": -1 }, { unique: true })
                                 // _this.db.collection('LTC-USD').createIndex({ "trade_id": -1 }, { unique: true })
@@ -89,7 +89,7 @@ class MongoTools {
         let _this = this
         return new Promise((resolve, reject)=>{
             if(_this.db){
-                _this.db.collection(market + '-fills-' + exchange).createIndex({ "trade_id": -1 }, { unique: true })         
+                _this.db.collection(market + '-fills').createIndex({ "trade_id": -1 }, { unique: true })         
                 resolve(true)
             }else{
                 logger.warn('CreateFillsDB promise reject, no db object')
@@ -120,7 +120,7 @@ class MongoTools {
 
     /**
      * 
-     * @param {*} market string - crypto marekt name eg ETH-USD
+     * @param {*} market string - crypto market name eg ETH-USD
      * @param {*} exchange string - exchange name all lowercase eg coinbase, gemini, binance 
      */
     CreateOrderBookDB(market, exchange){

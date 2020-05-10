@@ -1,5 +1,6 @@
 const GeminiAPI = require('gemini-api-vp').default
 require('dotenv').config()
+const sleep = require('../../../helper/sleep').sleep
 
 
 class Gemini_Websocket{
@@ -7,40 +8,64 @@ class Gemini_Websocket{
         this.ws = new GeminiAPI.WebsocketClient({ key: process.env.GEMINI_KEY, secret: process.env.GEMINI_SECRET, sandbox: false });
         this.symbol = symbol
         this.socket_sequence = -1
-
-
+        this.lastconnection = 0
+        this.cb = null
         this.openMarketSocket = this.openMarketSocket.bind(this)
-        this.init = this.init.bind(this)        
+        this.init = this.init.bind(this)         
     }
 
 
 
     init(){
- 
-        //this.openMarketSocket(this.symbol)       
+           
+       
     }
 
     /**
      * open for each market
      * @param {*} market 
      */
-    openMarketSocket(cb){        
+    async openMarketSocket(cb){      
 
-        this.ws.openMarketSocket(this.symbol, (market) => {
+        let currdate = new Date().getTime() 
+        //let _this = this
+        if(currdate > this.lastconnection + 70000){
 
-            this.ws.addMarketMessageListener((data) => {      
-                if(data.socket_sequence === (this.socket_sequence +1) ){
-                    this.socket_sequence = data.socket_sequence
-                    cb(data)
-                }else{
-                    console.log('dropped message')
-                }            
-                
+            this.ws.openMarketSocket(this.symbol, (market) => {
+                this.lastconnection = new Date().getTime()  
+
+                let handler = (data) => {      
+                    if(data.socket_sequence === (this.socket_sequence +1) ){
+                        this.socket_sequence = data.socket_sequence
+                        if(data.type === 'heartbeat'){
+                            console.log(data, this.symbol)
+                        }else{                     
+                            cb(data)
+                        }
+                        
+                    }else{
+                        console.log('dropped message')
+                        //start reconnect process
+                       
+                        this.ws.removeMarketMessageListener(this.ws.marketSocket._events.message)                                           
+                        this.socket_sequence = -1                       
+                        this.openMarketSocket(cb)
+
+                    }            
+                    
+                }
+
+                this.ws.addMarketMessageListener(handler)
             })
-        })
+        }else{
+            await sleep(5000)
+            this.openMarketSocket(cb)
+        }
+
                 
     }
 
+    
     openOrderSocket(){
 
         this.ws.openOrderSocket( data => {

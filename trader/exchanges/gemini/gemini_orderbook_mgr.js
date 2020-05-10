@@ -26,13 +26,16 @@ class OrderbookManager {
     async initBook(data){
         // first sync        
         //create bids and asks for intial book state
-
-        // delta:"990000"
-        // price:"0.00001"
-        // reason:"initial"
-        // remaining:"990000"
-        // side:"bid"
-        // type:"change"
+        // time: data.timestampms,
+        // socket_sequence: data.socket_sequence,
+        // events: {
+            // delta:"990000"
+            // price:"0.00001"
+            // reason:"initial"
+            // remaining:"990000"
+            // side:"bid"
+            // type:"change"
+            //}
 
         let _books = {
             bids: [], 
@@ -40,7 +43,7 @@ class OrderbookManager {
         }
 
         data.events.forEach(item =>{
-            let order = [item.price, item.size]     
+            let order = {price: item.price, size: item.remaining, time: data.time, side: item.side}
             if(item.side === 'bid'){
                 _books.bids.push(order)
             }else{
