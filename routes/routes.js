@@ -6,7 +6,7 @@ const Mongo = require('../database/mongo')
 const _Engine = require('../trader/engine')
 const engine = new _Engine()
 
-const db = new Mongo()
+
 
 routes = (app, io) =>{
 

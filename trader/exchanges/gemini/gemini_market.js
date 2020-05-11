@@ -4,12 +4,13 @@ const G_WS = require('./gemini_ws')
 
 
 class Market {
-    constructor(symbol){
+    constructor(symbol, database){
 
         this.symbol = symbol
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
         this.exchange = 'gemini'
+        this.db = database
 
         this.socket = null
         this.marketListener = this.marketListener.bind(this)

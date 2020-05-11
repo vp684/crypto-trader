@@ -12,7 +12,7 @@ class Engine {
       
         this.internetout = true
         this.exchanges = []
-
+        this.db = db.connectDB()
         this.createExchange = this.createExchange.bind(this);
         this.enginePreCheck = this.enginePreCheck.bind(this)
         this.socket = null
