@@ -1,9 +1,9 @@
 
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { Route } from "react-router-dom";
 import Exchanges from "./exchanges/Exchanges"
-import io from 'socket.io-client'
+//import io from 'socket.io-client'
 import AllMarkets from './markets/AllMarkets'
 
 
@@ -23,17 +23,16 @@ const useStyles = makeStyles((theme) => ({
    
 }));
 
-const socket = io('http://localhost:8000')
+
 
 export default function Main(){
-    
-    useEffect( () => {
-      socket.on('connect', function(){
-        console.log('client socket connect')
-        
-      })
+  
+
+    // useEffect( () => {
+      
+      
      
-    }, [])
+    // }, [])
 
     const classes = useStyles();
     return(
@@ -41,7 +40,7 @@ export default function Main(){
         <main className={classes.content}>
             <div className={classes.main} />
             <Route exact path="/exchanges" render={props => <Exchanges {...props} />} />
-            <Route path="/markets/:id" render={props => <AllMarkets {...props}/>} />
+            <Route path="/markets/:id" render={props => <AllMarkets {...props} />} />
         </main>
       
     )

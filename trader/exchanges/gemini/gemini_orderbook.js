@@ -8,10 +8,11 @@ class Orderbook {
         this.lastupdate = null
         this.bids = new RBTree((a, b) => a.price.comparedTo(b.price))
         this.asks = new RBTree((a, b) => a.price.comparedTo(b.price))
+        
     }
 
     _getTree(side) {
-        return side === 'sell' ? this.asks : this.bids;
+        return side === 'ask' ? this.asks : this.bids;
     }
 
     state(book) {
@@ -20,27 +21,32 @@ class Orderbook {
             if (book) {            
                 book.bids.forEach(order =>
                     this.add({                           
-                        side: 'buy',
-                        price: BigNumber(order[0]),
-                        size: BigNumber(order[1]),
+                        side: 'bid',
+                        price: BigNumber(order.price),
+                        size: BigNumber(order.size),
+                        time: order.time
                     })
                 );
     
                 book.asks.forEach(order =>
                     this.add({                                     
-                        side: 'sell',
-                        price: BigNumber(order[0]),
-                        size: BigNumber(order[1]),
+                        side: 'ask',
+                        price: BigNumber(order.price),
+                        size: BigNumber(order.size),
+                        time: order.time
                     })
                 );
                 resolve(true)
              
             } else {
-                book = { asks: [], bids: [] };
+                book = { asks: [], bids: [], ready:false, time: this.lastupdate };
     
                 this.bids.reach(bid => book.bids.push(bid));
                 this.asks.each(ask => book.asks.push(ask));
 
+                if(book.asks.length > 0 && book.bids.length > 0){
+                    book.ready = true
+                }
                 resolve(book);
             } 
         })
@@ -56,12 +62,13 @@ class Orderbook {
         // remaining:"3981.111652"
         // side:"ask"
         // type:"change"
-
+        this.lastupdate = data.time
         data.events.forEach(order =>{
             let change_order = {
                 side: order.side, 
                 price: BigNumber(order.price), 
-                size: BigNumber(order.size)
+                size: BigNumber(order.remaining),  
+                time: data.time    
 
             }
 
@@ -75,25 +82,22 @@ class Orderbook {
     }
 
     add(order) {
-        order = {
-            side: order.side,
-            price: BigNumber(order.price),
-            size: BigNumber(order.size),
-        };
-
+ 
         const tree = this._getTree(order.side);
         let node = tree.find({ price: order.price });
 
         if (!node) {
-            node = {
-                price: order.price,
-                order: order,
-            };
+            node = order
+            // {
+            //     price: order.price,
+            //     size: order.size,   
+            //     side:order.side             
+            // };
 
             tree.insert(node);
         }
 
-        node.order = order
+        node = order
 
     }
     

@@ -6,17 +6,19 @@ class GeminiExchange {
 
         constructor(){
               this.markets = {}                
-              this.exchange = 'gemini'                         
+              this.exchange = 'gemini'    
+              this.socket= null                                  
               this.init = this.init.bind(this)
+              this.defaultmarkets = ['btcusd', 'daiusd', 'batusd']
               this.init()
         }
 
 
 
         init(){
-            console.log(this.exchange)
-            this.addMarket('btcusd')
-            this.addMarket('daiusd')
+            console.log(this.exchange)  
+            this.defaultmarkets.forEach(mrk=> this.addMarket(mrk))
+                           
         }
 
         /**
@@ -44,6 +46,12 @@ class GeminiExchange {
                 markets.push(mrk)
             }
             return markets
+        }
+
+        setSocketToMarkets(socket){
+            for(let mrk in this.markets){               
+                this.markets[mrk].setSocket(socket)
+            }
         }
 
 

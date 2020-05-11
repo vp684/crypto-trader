@@ -4,13 +4,15 @@ const Mongo = require('../database/mongo')
 const db = new Mongo()
 const sleep = require('../helper/sleep').sleep
 const GeminiExchange = require('./exchanges/gemini/gemini_exchange')
+const io = require('socket.io-client')
+
 
 class Engine {
     constructor(){
       
         this.internetout = true
         this.exchanges = []
-
+        this.db = db.connectDB()
         this.createExchange = this.createExchange.bind(this);
         this.enginePreCheck = this.enginePreCheck.bind(this)
         this.socket = null
@@ -23,6 +25,8 @@ class Engine {
         // db.connectDB().catch( err =>{
         //     console.log(err)
         //     logger.error('db connection error', err)
+
+       
         // })
        this.start()
     }
@@ -87,10 +91,9 @@ class Engine {
         if(this.internetout) return
 
         for(let ex in this.exchanges){
-            console.log(ex)
-        }
-
-        await sleep(5000)
+            //console.log(ex)
+        }     
+        await sleep(1000)
         this.enginePreCheck() 
     }
 
@@ -101,6 +104,7 @@ class Engine {
      * @param {String} name Creates and exchange object for trading.  coinbase, gemini, or binance.
      */
     createExchange(name){
+
         return new Promise((resolve, reject) => {    
             let index = 0 
             this.exchanges.forEach(ex => {
@@ -117,6 +121,9 @@ class Engine {
                         resolve(true)
                         break;                                                         
                 }
+
+                //this.setExchangeSocket()
+
             }else{
                 resolve(false)
             }
@@ -126,6 +133,7 @@ class Engine {
     }
 
     getMarkets(exchange){
+
         return new Promise((resolve, reject) =>{
             let index = 0 
             let markets = []  
@@ -152,8 +160,14 @@ class Engine {
     }
    
 
-    setClientSocket(socket){
-        this.socket = socket
+
+
+    setExchangeSocket(socket){
+        
+        this.exchanges.forEach(ex =>{
+            ex.exchange.setSocketToMarkets(socket)
+
+        })        
     }
 
 

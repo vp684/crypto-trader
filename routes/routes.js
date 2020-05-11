@@ -1,42 +1,46 @@
 const express = require('express')
 const router = express.Router()
+const Mongo = require('../database/mongo')
 
-const socketIo = require('socket.io')
-const http = require('http')
 
 const _Engine = require('../trader/engine')
 const engine = new _Engine()
 
 
 
-routes = (app) =>{
+routes = (app, io) =>{
 
      /**
      * Socket io
      * 
      * 
-     */
-
-    const server = http.Server(app);
-    const io = socketIo(server);
-    const ioport = 8000
+    */
 
     
 
 
     io.on('connection', function (socket) {
-        engine.setClientSocket(socket)
-        console.log('socket connected')
-
-        socket.emit('news', { hello: 'world' });
-        socket.on('my other event', function (data) {
-            console.log(data);
-        });
-        engine.setClientSocket(socket)
-
+        console.log('socket connected', socket.id)      
+        
+               
+        engine.setExchangeSocket(socket)
+      
     });
+  
 
-    server.listen(ioport);
+    io.on('error', (error)=>{
+      console.log('socket error', error)
+    })
+    
+    io.on('disconnect', (event)=>{
+      console.log('disconnect', event)
+    })
+
+    io.on('reconnecting', (reconn)=>{
+      console.log('reconnecting', reconn)
+    })
+
+    
 
 
     router.route('/toggle-exchange').post(async (req, res) => {
