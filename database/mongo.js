@@ -266,16 +266,6 @@ class MongoTools {
                     else{ resolve() }
                 });
 
-                // amount:"0.01000000"
-                // canceled_at:null
-                // completed_at:"2018-07-23 17:25:22.470562+00"
-                // created_at:"2018-07-23 17:25:22.058177+00"
-                // details:Object {sent_to_address: "0xa48cf6d0E4Fe076EEBf3785A847aE2EaadbF40a1", coinbase_account_id: "55abb266-f788-55fc-bede-2efa054e705e",            coinbase_withdrawal_id: "7ecdc99a-e205-5f4f-9482-4c0c95f7f806", …}
-                // id:"4e294aac-496c-4ea9-a5fd-68b75e50cc86"
-                // processed_at:"2018-07-23 17:27:16.318233+00"
-                // type:"withdraw"
-                // user_nonce:null
-
             }catch(e){
                 console.log(e)
                 reject()
@@ -301,17 +291,6 @@ class MongoTools {
                     else{ resolve() }
                     
                 });
-
-                // amount:"0.01000000"
-                // canceled_at:null
-                // completed_at:"2018-07-23 17:25:22.470562+00"
-                // created_at:"2018-07-23 17:25:22.058177+00"
-                // details:Object {sent_to_address: "some address", 
-                // coinbase_withdrawal_id: "somehashs", …}
-                // id:"id hash"
-                // processed_at:"2018-07-23 17:27:16.318233+00"
-                // type:"withdraw"
-                // user_nonce:null
 
             }catch(e){
                 console.log(e)
@@ -418,17 +397,7 @@ class MongoTools {
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
-                         // fee:"none"
-                        // flat_id:29665533
-                        // maker_order_id:"order id hash"
-                        // order_id:"none"
-                        // price:"53.14000000"
-                        // product_id:"LTC-USD"
-                        // side:"buy"
-                        // size:"0.10000000"
-                        // taker_order_id:"taker id hash"
-                        // time:"2018-11-05T01:43:29.179000Z"
-                        // trade_id:34715651       
+    
                 const collection = _this.db.collection(market)
                 collection.find({ trade_id: { $gt: filledid } }).toArray(function (err, result) {
                     
@@ -473,20 +442,7 @@ class MongoTools {
 
         let _this = this
         return new Promise((resolve, reject)=>{
-            try{
-               
-                //     "_id" : ObjectId("5d154560834c1d3510c8bcc8"),
-                //     "type" : "match",
-                //     "trade_id" : 67825293,
-                //     "maker_order_id" : "maker order id hash",
-                //     "taker_order_id" : "taker order id hash",
-                //     "side" : "sell",
-                //     "size" : "1.05475107",
-                //     "price" : "10999.00000000",
-                //     "product_id" : "BTC-USD",
-                //     "sequence" : 9917796905.0,
-                //     "time" : ISODate("2019-06-27T18:38:24.520-04:00")
-         
+            try{                        
                 
                 let collec = market + "-lastorders"
                 const collection = _this.db.collection(collec)
@@ -525,7 +481,7 @@ class MongoTools {
         let _this = this
         let tempdays = daysago || 30 // defaults to 30 days
         
-        let finaldays = tempdays * 24 * 60 * 60 * 1000// milliseoncds ina d ay 86,400,000
+        let finaldays = tempdays * 24 * 60 * 60 * 1000// milliseoncds in a day 86,400,000
         let days = new Date(Date.now() -  finaldays)
 
         // Convert date object to hex seconds since Unix epoch
@@ -549,15 +505,9 @@ class MongoTools {
             
             })
 
-
-
         })
 
-
     }
-
-
-
 
 }
 
