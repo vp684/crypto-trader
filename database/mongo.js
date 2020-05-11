@@ -18,7 +18,7 @@ class MongoTools {
         let _this = this
         return new Promise((resolve, reject) =>{
             try{
-                child_process.exec('service mongod start', function (error, stdout, stderr) {
+                child_process.exec('systemctl start mongod.service', function (error, stdout, stderr) {
                     if (error) {
                         if (error.code == 100) {
                             console.log('already running');

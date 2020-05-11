@@ -7,6 +7,11 @@ class Market {
     constructor(symbol, database){
 
         this.symbol = symbol
+        this.position = {
+            avg_price: null, 
+            quantity: null,
+            calculated: false
+        }
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
         this.exchange = 'gemini'
@@ -14,6 +19,7 @@ class Market {
 
         this.socket = null
         this.marketListener = this.marketListener.bind(this)
+        this.calculatePosition = this.calculatePosition.bind(this)
         this.init()        
     }
 
@@ -39,6 +45,9 @@ class Market {
     }
 
     async mainLoop(){        
+
+        await this.calculatePosition()
+
         let ob = await this.obMgr.book.state()
         if(ob.ready){
             let date =  new Date(ob.time)
@@ -65,6 +74,16 @@ class Market {
         
         await sleep(750)
         this.mainLoop()
+    }
+
+    calculatePosition(){
+        
+        return new Promise((resolve, reject) =>{    
+
+            console.log(this)
+
+            resolve()
+        })
     }
 
     setSocket(socket){
