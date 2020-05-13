@@ -1,10 +1,12 @@
 const sleep = require('../../../helper/sleep').sleep
 let obmanager = require('./gemini_orderbook_mgr')
 const G_WS = require('./gemini_ws')
+const G_Rest = require('./gemini_rest')
+
 
 
 class Market {
-    constructor(symbol, database){
+    constructor(symbol, db){
 
         this.symbol = symbol
         this.position = {
@@ -14,12 +16,14 @@ class Market {
         }
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
+        this.rest = new G_Rest(db) 
         this.exchange = 'gemini'
-        this.db = database
+        this.db = db
 
         this.socket = null
         this.marketListener = this.marketListener.bind(this)
         this.calculatePosition = this.calculatePosition.bind(this)
+        this.getFills = this.getFills.bind(this)
         this.init()        
     }
 
@@ -76,14 +80,46 @@ class Market {
         this.mainLoop()
     }
 
-    calculatePosition(){
+    getFills(){
         
         return new Promise((resolve, reject) =>{    
+                                        
+            this.db.calcFromFill(this.symbol).then(fills=>{              
+                resolve(fills)
+            }).catch(e=>{
+                //set calcualted to false, some error
+                this.position.calculated = false
+                resolve()
+            })
+            
 
-            console.log(this)
-
-            resolve()
+           
         })
+    }
+
+    calculatePosition(){
+        return new Promise(async (resolve, reject) =>{
+
+            //let fills = await this.getFills()
+            
+            // calculate position or make more fills calls
+            //console.log(fills)
+
+            // finish calculating position and determien if we need more fills in datrabase
+            let trades = false
+            if(true){
+                trades = await this.rest.getMyPastTrades({symbol:this.symbol})
+            }
+          
+            //insert any trades into db and recalculate position
+            if(trades){
+                
+                console.log(trades)
+            }
+            
+            
+        })
+        
     }
 
     setSocket(socket){

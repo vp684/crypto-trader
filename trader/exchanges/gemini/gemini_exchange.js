@@ -4,12 +4,13 @@ const settings = require('./gemini_settings')
 
 class GeminiExchange {
 
-        constructor(){
+        constructor(db){
               this.markets = {}                
-              this.exchange = 'gemini'    
+              this.exchange = 'gemini'  
+              this.db = db  
               this.socket= null                                  
               this.init = this.init.bind(this)
-              this.defaultmarkets = ['btcusd', 'daiusd', 'batusd']
+              this.defaultmarkets = ['BTCUSD']
               this.init()
         }
 
@@ -33,7 +34,7 @@ class GeminiExchange {
                 }
             }
             if(index !== -1){
-                let mrk = new Market(market)      
+                let mrk = new Market(market, this.db)      
                 this.markets[market] = mrk
 
             }
