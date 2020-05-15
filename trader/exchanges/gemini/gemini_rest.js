@@ -115,7 +115,7 @@ class Gemini_REST{
      * 
      * @param {Object} params object   symbol: string limit_trades?: number timestamp?: number
      */
-    getMyPastTrades(params ){
+    getMyPastTrades(params){
            
             return new Promise((resolve, reject) => {
                 let exec = () => {

@@ -1,6 +1,10 @@
 
 const Market = require('./gemini_market')
 const settings = require('./gemini_settings')
+const G_Rest = require('./gemini_rest')
+
+const checkInternet = require('../../../helper/checkinternet').checkInternet
+const sleep = require('../../../helper/sleep').sleep
 
 class GeminiExchange {
 
@@ -8,6 +12,7 @@ class GeminiExchange {
               this.markets = {}                
               this.exchange = 'gemini'  
               this.db = db  
+              this.rest = new G_Rest(this.db)
               this.socket= null                                  
               this.init = this.init.bind(this)
               this.defaultmarkets = ['BTCUSD']
@@ -16,8 +21,11 @@ class GeminiExchange {
 
 
 
-        init(){
-            console.log(this.exchange)  
+        async init(){           
+            if(!await this.pingServer()){
+                await sleep(15000)
+                return this.init()
+            }
             this.defaultmarkets.forEach(mrk=> this.addMarket(mrk))
                            
         }
@@ -34,9 +42,8 @@ class GeminiExchange {
                 }
             }
             if(index !== -1){
-                let mrk = new Market(market, this.db)      
+                let mrk = new Market(market, this.db, this.rest)      
                 this.markets[market] = mrk
-
             }
                 
         }
@@ -55,6 +62,18 @@ class GeminiExchange {
             }
         }
 
+
+        pingServer(){
+            return new Promise((resolve, reject) =>{
+                checkInternet((canping)=>{
+                    if(!canping){
+                        console.log(`cant reach: ${this.exchange} api` )
+                    }
+                    resolve(canping)
+    
+                }, "https://api.gemini.com")
+            })
+        }
 
 
 

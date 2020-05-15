@@ -1,22 +1,25 @@
 const sleep = require('../../../helper/sleep').sleep
 let obmanager = require('./gemini_orderbook_mgr')
 const G_WS = require('./gemini_ws')
-const G_Rest = require('./gemini_rest')
+
+const checkInternet = require('../../../helper/checkinternet').checkInternet
 
 
 
 class Market {
-    constructor(symbol, db){
+    constructor(symbol, db, rest){
 
         this.symbol = symbol
         this.position = {
-            avg_price: null, 
-            quantity: null,
+            total_avg_price: null,
+            ex_avg_price: null, 
+            exchange_qty: null,
+            total_quantity: null,
             calculated: false
         }
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
-        this.rest = new G_Rest(db) 
+        this.rest = rest
         this.exchange = 'gemini'
         this.db = db
 
@@ -24,11 +27,13 @@ class Market {
         this.marketListener = this.marketListener.bind(this)
         this.calculatePosition = this.calculatePosition.bind(this)
         this.getFills = this.getFills.bind(this)
-        this.init()        
+        this.pingServer = this.pingServer.bind(this)        
+        this.init()
     }
 
-    init(){    
+    async init(){    
        console.log('gemini market open', this.symbol)        
+       
        this.marketListener()    
        this.mainLoop() 
     }
@@ -49,9 +54,16 @@ class Market {
     }
 
     async mainLoop(){        
+        if(!await this.pingServer()){
+            await sleep(15000)
+            this.mainLoop()
+        }
 
         await this.calculatePosition()
 
+        if(this.position.calculated){
+            //position is correct for exchange.
+        }
         let ob = await this.obMgr.book.state()
         if(ob.ready){
             let date =  new Date(ob.time)
@@ -98,6 +110,8 @@ class Market {
     }
 
     calculatePosition(){
+
+
         return new Promise(async (resolve, reject) =>{
 
             //let fills = await this.getFills()
@@ -113,8 +127,7 @@ class Market {
           
             //insert any trades into db and recalculate position
             if(trades){
-                
-                console.log(trades)
+                               
             }
             
             
@@ -134,6 +147,18 @@ class Market {
         else{
             console.log('no socket')
         }
+    }
+
+    pingServer(){
+        return new Promise((resolve, reject) =>{
+            checkInternet((canping)=>{
+                if(!canping){
+                    
+                }
+                resolve(canping)
+
+            }, "https://api.gemini.com")
+        })
     }
     
 }
