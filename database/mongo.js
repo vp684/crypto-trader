@@ -14,8 +14,6 @@ class MongoTools {
     constructor(){
         this.db = null
         this.MongoClient = require('mongodb')
-
-
         this.insertManyFills = this.insertManyFills.bind(this)
     };
 
@@ -276,20 +274,19 @@ class MongoTools {
      * @param {Array} transfer Array fo transfer objects
      * @param {String} market String for market for which coins were transferred
      */
-    InsertManyTransfers(market, transfer){
+    insertManyTransfers(market, transfer){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
-                let m = market+"-transfers"
-                let options = { ordered: false };
-                for(let i=0;i<transfer.length;i++){
-                    transfer[i].completed_at = new Date(transfer[i].completed_at)
-                    transfer[i].created_at = new Date(transfer[i].created_at)
-                    transfer[i].processed_at = new Date(transfer[i].processed_at)
-                }               
+                let m = market + "-Transfers"
+                let options = { ordered: false };                      
                 _this.db.collection(m).insertMany(transfer, options, function (err, result) {                
-                    if(err.code !== 11000) { reject() }
-                    else{ resolve() }
+                    if(err) { 
+                        resolve(err.result.nInserted > 0 ? true : false) 
+                    }
+                    else{ 
+                        resolve(result.insertedCount > 0 ? true : false) 
+                    }
                 });
 
             }catch(e){
@@ -380,31 +377,27 @@ class MongoTools {
     /**
      * 
      * @param {Number} filledid Filled id to search from
-     * @param {String} market Market to search in
+     * @param {String} token Token to search for
+     * @param {Int} time optional date object or timestamp in ms to search after
      */
-    GetTransfers(market, filledid){
+    getTransfers(token, _exchange, time = 0){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
-                let m = market+"-transfers"
+                let m = token +"-Transfers"
+    
 
-                _this.FindLastFill(market, filledid).then((data)=>{
-
-                    if(data.length > 0){
-                        let xdate = new Date(data[data.length -1].time)
-                        _this.db.collection(m).find({ created_at: { $gte: xdate } }).toArray(function (err, result) {
-                            if (err) {
-                                console.log('mpongo get', err)
-                                reject(null)
-                            }
-                            else{resolve(result)}                                                          
-                        }) 
-                    }
-                    else {
-                        console.log('mongo transfers error')
+                let xdate = typeof time === 'object' ? time : new Date(time)
+                _this.db.collection(m).find({ time: { $gte: xdate }, exchange:  _exchange}).toArray(function (err, result) {
+                    if (err) {
+                        logger.error('getTransfers error', err)
                         resolve(null)
-                    }                    
-                })
+                    }
+                    else{resolve(result)}                                                          
+                }) 
+             
+                               
+             
                  
             }catch(e){
                 console.log(e)

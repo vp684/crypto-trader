@@ -54,23 +54,17 @@ class Gemini_REST{
             if(this.privateQue.length > 0){                     
                 let curtime = new Date().getTime()            
                 let newprivtime = this.last_private_call + this.private_limit  
-                console.log(curtime - newprivtime)          
+                //console.log(curtime - newprivtime)          
                 if(curtime > newprivtime){
-                    this.last_private_call = curtime  
-                                                       
+                    this.last_private_call = curtime                                                         
                     this.privateQue[0].func()
                     this.privateQue.splice(0, 1)                                        
                 }                                                        
             }
              //  extra time to check between calls
-           
-        
-            await sleep(50)
-            this.privateLimiter() 
-                
-            
-           
-                 
+                   
+            await sleep(20)
+            this.privateLimiter()                                                         
         }
         catch(e){
            logger.error('Gemini REST public limiter error', e)
@@ -119,10 +113,16 @@ class Gemini_REST{
            
             return new Promise((resolve, reject) => {
                 let exec = () => {
-                        this.api.getMyPastTrades(params).then( async (results) => {                                                    
-                            let final = await this.format.restTrades(results, params.symbol)
-                            let inserted = await this.db.insertManyFills(final, params.symbol)
-                            resolve(inserted)  
+                        this.api.getMyPastTrades(params).then( async (results) => {   
+                            if(results){
+                                let fills = await this.format.restTrades(results, params.symbol)
+                                let inserted = await this.db.insertManyFills(fills, params.symbol)
+                                resolve({
+                                    nInserted: inserted, 
+                                    fills: fills
+                                }) 
+                            }else{reject(false)}                                                 
+                             
                         }).catch(e =>{
                             logger.error('past trades error', e)
                             reject('error')
@@ -139,6 +139,50 @@ class Gemini_REST{
 
     }
 
+    getMyAvailableBalances(){
+        return new Promise((resolve, reject) => {
+            let exec = () => {
+                this.api.getMyAvailableBalances().then(async (results) =>{               
+                    resolve(results)
+                })
+            }
+            let final = {
+                name: 'getMyAvailableBalances', 
+                func: exec
+            }
+
+            this.pushPrivate(final)
+        })
+    }
+
+    /**
+     * 
+     * @param {String} symbol required market symbol to filter for: ETHUSD, BTCUSD. 
+     * @param {Object} params object for optional parameters, timestamp: in ms, limit_transfers: integer max 50 
+     */
+    getMyTransfers(symbol, params = { limit_transfers: 50 }){
+        return new Promise((resolve, reject) => {
+            let exec = () => {
+                this.api.getMyTransfers(params).then(async (results) => {
+                    if(results){
+                        let transfers = results.filter(item =>  item.currency == symbol)
+                        transfers = await this.format.restTransfers(transfers, symbol)
+                        let inserted = await this.db.insertManyTransfers(symbol, transfers)
+                        resolve({
+                            nInserted: inserted, 
+                            transfers: transfers
+                        })               
+                    }
+                         
+                })
+            }
+            let final = {
+                name: "getMyTransfers",
+                func: exec
+            }
+            this.pushPrivate(final)
+        })
+    }
   
 }
 

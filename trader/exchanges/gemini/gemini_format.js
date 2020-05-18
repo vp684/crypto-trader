@@ -43,4 +43,29 @@ module.exports = class GeminiFormats{
             resolve(final)
         })
     }
+
+    restTransfers(transfers, symbol){
+        return new Promise((resolve, reject) => {
+            let final = []  
+            if(transfers.length > 0){
+                for (let i = 0; i < transfers.length; i++) {
+                    const item = transfers[i]
+                    let xfer = {}
+                    xfer.exchange = 'gemini'
+                    xfer.market = item.currency
+                    xfer.id = item.eid
+                    xfer.type = item.type.toLowerCase()
+                    xfer.time = new Date(item.timestampms)
+                    xfer.amount = item.amount
+                    xfer.exchange_specific = {
+                        txHash : item.txHash, 
+                        destination : item.destination
+                    }
+                    final.push(xfer)
+                }
+
+            }
+            resolve(final)
+        })
+    }
 }

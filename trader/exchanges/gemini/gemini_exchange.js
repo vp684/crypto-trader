@@ -16,10 +16,10 @@ class GeminiExchange {
               this.socket= null                                  
               this.init = this.init.bind(this)
               this.defaultmarkets = ['BTCUSD']
+
+              this.marketBalances = this.marketBalances.bind(this)
               this.init()
         }
-
-
 
         async init(){           
             if(!await this.pingServer()){
@@ -27,9 +27,41 @@ class GeminiExchange {
                 return this.init()
             }
             this.defaultmarkets.forEach(mrk=> this.addMarket(mrk))
-                           
+            this.mainLoop()               
         }
 
+
+
+        /**
+         * Main Loop 
+         */
+        async mainLoop(){
+            //couldnt ping server, wait and restart
+            if(!await this.pingServer()){ return this.restartLoop(15000) }
+            
+            //send active balance to markets
+            await this.marketBalances()
+            
+            
+
+            //restart loop
+            this.restartLoop(3000)
+        }
+
+        async restartLoop(delay){
+            await sleep(delay)
+            this.mainLoop()
+        }
+
+        marketBalances(){
+            return new Promise(async (resolve, reject) =>{
+                let bals = await this.rest.getMyAvailableBalances()
+
+                for(let mark in this.markets){
+                    this.markets[mark].setBalances(bals)
+                }
+            })
+        }            
         /**
          * 
          * @param {String} market  hyphenated market to trade ie BTCUSD
@@ -71,7 +103,7 @@ class GeminiExchange {
                     }
                     resolve(canping)
     
-                }, "https://api.gemini.com")
+                }, "exchange.gemini.com")
             })
         }
 
