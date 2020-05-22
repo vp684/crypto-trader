@@ -2,12 +2,14 @@ const sleep = require('../../../helper/sleep').sleep
 let obmanager = require('./gemini_orderbook_mgr')
 const G_WS = require('./gemini_ws')
 const BigNumber = require('bignumber.js')
+const G_Format = require('./gemini_format')
 
 
 
 class Market {
     constructor(symbol, db, rest){
 
+        this.format = new G_Format()
         this.symbol = symbol      
         this.tradesymbol = symbol.slice(0, 3).toUpperCase()
         this.position = {
@@ -23,12 +25,23 @@ class Market {
             symbol:null,  
             update: false
         }
+        this.market_data = {
+            init: null, 
+            candles: null,
+            period: '4hr', 
+            standard_m:[1, 5, 15, 30],
+            standard_h:[1, 6, 24]
+        }
+        this.orders = {
+            bids: [], 
+            asks: []
+        }
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
         this.rest = rest
         this.exchange = 'gemini'
         this.db = db
-
+        this.previoustrade = null
         this.socket = null
         this.marketListener = this.marketListener.bind(this)
         this.calculatePosition = this.calculatePosition.bind(this)  
@@ -38,7 +51,10 @@ class Market {
     async init(){    
        console.log('gemini market open', this.symbol)        
        
-       this.marketListener()    
+       this.initCandles()  
+
+       this.marketListener()  
+
        this.mainLoop() 
     }
 
@@ -51,17 +67,35 @@ class Market {
                     socket_sequence: data.socket_sequence,
                     events: data.events.filter( order => order.type === "change")
                 }                                
-                this.obMgr.onMessage(order_changes)
+                this.obMgr.onMessage(order_changes)  
                 
+                let trades = data.events.filter(order => order.type === "trade")
+                if(trades.length > 0){
+
+                    trades.forEach((value) => { value.time = new Date(data.timestampms) })
+                    this.updateCandles(trades)
+                }
+
+
+              
+                
+               
             }
+
+           
+        })
+    }
+
+    orderListener(){
+        this.ws.openOrderSocket((data) =>{
+            console.log(data)
         })
     }
 
     async mainLoop(){        
+      
 
         await this.calculatePosition()
-
-    
 
         if(this.position.calculated){
             //position is correct for exchange. continue logic
@@ -89,10 +123,15 @@ class Market {
             }
      
         }
-       
+        
+        if(this.market_data.candles !== null){
+            console.log(this.market_data.candles[0])
+            console.log(this.market_data.candles)
+
+        }
         
      
-        this.restartLoop(750)   
+        this.restartLoop(5000)   
         
     }
 
@@ -102,6 +141,8 @@ class Market {
     }
 
 
+
+ 
     setBalances(bal){
         
         if(bal.length > 0){
@@ -118,6 +159,86 @@ class Market {
         console.log(bal)
     }
 
+    async initCandles(){
+        let digits = this.market_data.period.match(/\d+/)[0]
+        let period = this.market_data.period.match(/[a-zA-Z]+/)[0]
+
+
+        let type =  period === 'hr' ? this.market_data.standard_h : this.market_data.standard_m
+        let searchperiod = false
+        for(let i = type.length -1; i > -1; i--){
+            if(type[i] < digits){
+                let finalperiod = digits % type[i] === 0 ? type[i] : 0
+                if(finalperiod > 0){
+                    searchperiod = finalperiod
+                    i = -1
+                }
+            }
+        }
+
+        if(searchperiod !== false){
+            //get candles from rest
+            searchperiod = searchperiod + period
+            let initialcandles = await this.rest.getCandles(this.symbol, searchperiod)  
+            
+            //format candles to erquired period
+            if(initialcandles){
+                this.market_data.candles = await this.format.formatCandles(initialcandles, digits, period)
+                console.log(this.market_data.candles)
+            }
+        }else{
+            logger.error('initCandles problem', {
+                digits, period
+            })
+        }     
+        
+    }
+
+
+    async updateCandles(data){
+        let digits = Number(this.market_data.period.match(/\d+/)[0])
+        let period = this.market_data.period.match(/[a-zA-Z]+/)[0]    
+
+        if(this.market_data.candles){
+            let cndl = this.market_data.candles[0]
+            let prevcndl = this.market_data.candles[1]
+            for (let i = 0; i < data.length; i++) {
+                const candle = data[i];
+                const datahrormin = period == 'hr' ? candle.time.getHours() : candle.time.getMinutes()
+                const cndlhrormin = period == 'hr' ? prevcndl.time.getHours() : prevcndl.time.getMinutes()
+                
+                if(datahrormin >= (cndlhrormin + digits) ){
+                    let ncndl = {
+                        open: Number(candle.price),
+                        high: Number(candle.price),
+                        low: Number(candle.price),
+                        close: Number(candle.price),
+                        vol: Number(candle.amount),
+                        time: candle.time
+                    }
+                    let sethr = this.market_data.candles[1].getHours() + 4
+                    this.market_data.candles[0].time.setHours(sethr, 0, 0, 0)
+
+                    this.market_data.candles = [ncndl, ...this.market_data.candles] 
+
+                    if(this.market_data.candles.length > 500){
+                        this.market_data.candles.pop()
+                    }
+
+                } else{     
+                    let price = Number(candle.price)
+
+                    cndl.high = price > cndl.high ? price : cndl.high
+                    cndl.low = price < cndl.low ? price : cndl.low
+                    cndl.vol = BigNumber(cndl.vol).plus(BigNumber(candle.amount)).toNumber()
+                    cndl.close = price
+                    cndl.time = candle.time                                                                                            
+                }
+            }
+        }    
+      
+    }
+
     calculatePosition(){
 
 
@@ -130,9 +251,7 @@ class Market {
                 let fills = await this.db.calcFromFill(this.symbol)
                 let xfertime = fills.length > 0 ? fills[0].time : 0
                 let transfers = await this.db.getTransfers(this.tradesymbol, this.exchange, xfertime)
-
-                let average = null
-                let qty = null
+ 
                 let total_withdrawals = BigNumber(0)
                 for (let i = 0; i < transfers.length; i++) {
                     const xfer = transfers[i];
@@ -146,9 +265,7 @@ class Market {
                     }
 
 
-                }
-                let test = total_withdrawals.toNumber()
-                console.log(test)
+                }    
 
                 let exchange_bal = BigNumber(0) // compare to exchange balances to see fi we are missing trades in db
                 let total_price = BigNumber(0) // pre calc for total avg entry price across all exchanges                                 
@@ -173,14 +290,7 @@ class Market {
                 let total_avg_price = total_price.dividedBy(total_bal)
                 // check exchange balance against reported amounts                
                 exchange_bal = exchange_bal.plus(total_withdrawals)
-                console.log(exchange_bal.toNumber())
-
-                console.log({
-                    total_avg_price: total_avg_price.toNumber(), 
-                    total_bal: total_bal.toNumber(), 
-                    exchange_bal: exchange_bal.toNumber()
-                })  
-                
+                                
                 let rest_balance = BigNumber(this.balances.symbol)
                 if(exchange_bal.isEqualTo(rest_balance) ){ //
                     this.position = {
@@ -241,7 +351,7 @@ class Market {
                     }
                    
                   
-                    await sleep(1000)
+                    await sleep(1500)
 
                 }   
               

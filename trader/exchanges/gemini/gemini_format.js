@@ -1,3 +1,5 @@
+const BigNumber = require('bignumber.js')
+
 module.exports = class GeminiFormats{
 
     constructor(){
@@ -68,4 +70,79 @@ module.exports = class GeminiFormats{
             resolve(final)
         })
     }
+
+    formatCandles(candles, digits, period){
+        return new Promise((resolve, reject) =>{
+            let final = null
+            if(candles){
+                    digits = Number(digits)
+                    final = []
+                   
+
+                    for (let i = candles.length -1; i > -1; i--) {
+                        let cndl = {
+                            open: null,
+                            high: null,
+                            low: null,
+                            close: null,
+                            vol: null,
+                            time: null
+                        }                  
+
+                        const candle = candles[i];
+                        const cdate = new Date(candle[0])
+                        //gemini reports bar open time. this uses bar closing time.
+                        cdate.setHours(cdate.getHours() + 1)                                              
+
+                        if(final.length > 0){
+                            const finalhourormin = period === 'hr' ? final[0].time.getHours() : final[0].time.getMinutes()
+                            const fcndl = final[0]
+
+                            if(finalhourormin % digits === 0 ){
+                                //insert a new bar
+                                cndl.open = candle[1]
+                                cndl.high = candle[2]
+                                cndl.low = candle[3]
+                                cndl.close = candle[4]
+                                cndl.vol = candle[5]
+                                cndl.time = cdate
+                                final = [cndl, ...final]
+
+                            }else{
+                                let high, low, vol
+                                high = BigNumber(candle[2])
+                                low = BigNumber(candle[3])
+                                vol = BigNumber(candle[5])
+
+                                fcndl.high = high.isGreaterThan(fcndl.high) ? high.toNumber() : fcndl.high
+                                fcndl.low = low.isLessThan(fcndl.low) ? low.toNumber() : fcndl.low
+                                fcndl.vol = vol.plus(fcndl.vol).toNumber()
+                                fcndl.close = candle[4]
+                                fcndl.time = cdate
+
+                            }
+
+                        }else{
+                            //final has no data, add first candle and round up date time to nearest close time   
+                          
+                            cndl.open = candle[1]
+                            cndl.high = candle[2]
+                            cndl.low = candle[3]
+                            cndl.close = candle[4]
+                            cndl.vol = candle[5]
+                            cndl.time = cdate
+                            final.push(cndl)
+                        }
+
+
+                        //dorps first few bars so we can sync up to period 
+                        
+                    }
+                    resolve(final)
+            }else{
+                resolve(final)
+            }
+        })    
+    }
+
 }

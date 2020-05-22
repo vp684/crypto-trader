@@ -21,7 +21,7 @@ class Gemini_REST{
         this.private_limit = 200 // 600 per min no moe than 5 per sec.
    
         this.privateLimiter()
-        //this.publicLimiter()
+        this.publicLimiter()
         this.getMyPastTrades = this.getMyPastTrades.bind(this)
     }
 
@@ -69,14 +69,23 @@ class Gemini_REST{
         catch(e){
            logger.error('Gemini REST public limiter error', e)
             await sleep(2000)
-            
+            this.privateLimiter()             
         }
 
 
     }
 
-    pushPublic(){
-
+    pushPublic(funcobj){
+        if(funcobj.func){   
+            let noduplicate = this.privateQue.some((value) => { 
+                let fe = value.name === funcobj.name                
+                return fe
+            })
+            if(!noduplicate){              
+               this.publicQue.push(funcobj)  
+            } 
+                                          
+        }
     }
 
     pushPrivate(funcobj){
@@ -85,8 +94,7 @@ class Gemini_REST{
                 let fe = value.name === funcobj.name                
                 return fe
             })
-            if(!noduplicate){
-                console.log('called limiter que is 1', this.privateQue.length)
+            if(!noduplicate){  
                this.privateQue.push(funcobj)  
             } 
                                           
@@ -102,6 +110,28 @@ class Gemini_REST{
             "side": "buy"
         })
 
+    }
+
+    getCandles(symbol, timeframe = '1hr'){
+        return new Promise((resolve, reject) =>{
+            let exec = () => {
+                this.api.getCandles(symbol, timeframe).then((results) => {   
+                    if(results){
+                        resolve(results)
+                    }else{resolve(false)}                                                 
+                     
+                }).catch(e =>{
+                    logger.error('past trades error', e)
+                    resolve(false)
+                })
+            }
+            let final = {
+                name: 'candles' + symbol,
+                func: exec
+            }
+
+            this.pushPublic(final)
+        })
     }
 
 
@@ -183,6 +213,8 @@ class Gemini_REST{
             this.pushPrivate(final)
         })
     }
+
+    
   
 }
 
