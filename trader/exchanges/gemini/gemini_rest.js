@@ -4,6 +4,8 @@ const GeminiAPI = require('gemini-api-vp').default
 const sleep = require('../../../helper/sleep').sleep
 const logger = require('../../../helper/logger')
 const G_Format = require('./gemini_format')
+const crypto = require('crypto')
+const randomBytes = crypto.randomBytes
 
  
 
@@ -101,13 +103,47 @@ class Gemini_REST{
         }
     }
 
-    newOrder(market, qty, price, side){
+    /**
+     * 
+     * @param {String} market market symbol "btcusd"
+     * @param {String} qty amount to buy or sell
+     * @param {String} price price as string
+     * @param {String} side  "buy" or "sell"
+     * @param {Boolean} makerbool default true for maker or cancel
+     */
+    newOrder(market, qty, price, side, makerbool = true ){
+        // client_order_id?: string
+        // symbol: string
+        // amount: string
+        // price: string
+        // side: OrderSide
+        // type: OrderType
+        // options?: OrderExecutionOption
+        let opts = []
+        if(makerbool){
+            opts.push('maker-or-cancel')    
+        }
+        let id = randomBytes(10).toString('hex')
+        console.log(id)
 
-        api.newOrder({
-            "symbol": "btcusd", 
-            "amount": "0.005", 
-            "price": "6915.00",
-            "side": "buy"
+       
+        return new Promise((resolve, reject) =>{
+            let exec = () => {
+                this.api.newOrder({
+                    "client_order_id": id,
+                    "symbol": market, 
+                    "amount": qty, 
+                    "price": price,
+                    "side": side, 
+                    "type": "exchange limit",
+                    "options": opts
+                })
+            }
+            let final = {
+                name: "newOrder" + id, 
+                func: exec
+            }
+            this.pushPrivate(final)
         })
 
     }

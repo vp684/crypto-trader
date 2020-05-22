@@ -33,6 +33,7 @@ class Market {
             standard_h:[1, 6, 24]
         }
         this.orders = {
+            socket: false,
             bids: [], 
             asks: []
         }
@@ -54,6 +55,8 @@ class Market {
        this.initCandles()  
 
        this.marketListener()  
+
+       this.orderListener()
 
        this.mainLoop() 
     }
@@ -89,6 +92,7 @@ class Market {
     orderListener(){
         this.ws.openOrderSocket((data) =>{
             console.log(data)
+            if(data.type === 'subscription_ack'){ this.orders.socket = true}
         })
     }
 
@@ -122,13 +126,18 @@ class Market {
                 
             }
      
-        }
-        
-        if(this.market_data.candles !== null){
-            console.log(this.market_data.candles[0])
-            console.log(this.market_data.candles)
+        }   
 
+        if(this.orders.socket){
+            this.rest.newOrder(this.symbol, "0.001", "4200.42", "buy")
         }
+       
+        
+        // if(this.market_data.candles !== null){
+        //     console.log(this.market_data.candles[0])
+        //     console.log(this.market_data.candles)
+
+        // }
         
      
         this.restartLoop(5000)   
