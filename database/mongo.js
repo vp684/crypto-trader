@@ -1,6 +1,12 @@
 var child_process = require('child_process')
 var logger = require('../helper/logger')
 
+    // _this.db.collection('ETH-USD').createIndex({ "trade_id": -1 }, { unique: true })
+    // _this.db.collection('BTC-USD-transfers').createIndex({"id": -1}, {unique: true})
+    // _this.db.createCollection('BTC-USD-lastorders', {capped:true, size:512000000})
+    // _this.db.createCollection('ZRX-USD-lastorders', {capped:true, size:512000000})
+    // _this.db.collection('BTC-USD-lastorders').createIndex({'trade_id': -1}, {unique:true})
+
 
 
 class MongoTools {
@@ -8,6 +14,7 @@ class MongoTools {
     constructor(){
         this.db = null
         this.MongoClient = require('mongodb')
+        this.insertManyFills = this.insertManyFills.bind(this)
     };
 
 
@@ -18,7 +25,7 @@ class MongoTools {
         let _this = this
         return new Promise((resolve, reject) =>{
             try{
-                child_process.exec('service mongod start', function (error, stdout, stderr) {
+                child_process.exec('sudo systemctl start mongod.service', function (error, stdout, stderr) {
                     if (error) {
                         if (error.code == 100) {
                             console.log('already running');
@@ -42,27 +49,10 @@ class MongoTools {
                             }
                             if(database){                        
                                 _this.db = database.db('CryptoData');                            
-                                // _this.db.collection('ETH-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                // _this.db.collection('BTC-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                // _this.db.collection('LTC-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                // _this.db.collection('BCH-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                // _this.db.collection('ZRX-USD').createIndex({ "trade_id": -1 }, { unique: true })
-                                // _this.db.collection('ETH-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                // _this.db.collection('BTC-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                // _this.db.collection('LTC-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                // _this.db.collection('BCH-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                // _this.db.collection('ZRX-USD-transfers').createIndex({"id": -1}, {unique: true})
-                                // _this.db.createCollection('ETH-USD-books', {capped: true, size: 1024000000})
-                                // _this.db.createCollection('BTC-USD-books', {capped: true, size: 1024000000})
-                                // _this.db.createCollection('LTC-USD-books', {capped: true, size: 1024000000})
-                                // _this.db.createCollection('ZRX-USD-books', {capped: true, size: 1024000000})
-                                // _this.db.createCollection('BTC-USD-lastorders', {capped:true, size:512000000})
-                                // _this.db.createCollection('ZRX-USD-lastorders', {capped:true, size:512000000})
-                                // _this.db.collection('BTC-USD-lastorders').createIndex({'trade_id': -1}, {unique:true})
-                                // _this.db.collection('ZRX-USD-lastorders').createIndex({'trade_id': -1}, {unique:true})
+                               
 
                                 console.log("Connected successfully to MongoDB")
-                                resolve(true)
+                                resolve(_this)
                             }
                         })
                        
@@ -71,7 +61,7 @@ class MongoTools {
                 })
 
             }catch(e){
-                reject(e)
+                reject(false)
                 logger.error('Database catch error', e)
             }
         })
@@ -134,16 +124,47 @@ class MongoTools {
         }
     }
 
+     /**
+     * Gets all trades after filled id for market
+     * @param {String} market Market to search in
+     */
+    calcFromFill(market){
+        let _this = this
+        return new Promise(async (resolve, reject)=>{
+            try{
+
+                let flattrade = await _this.getFlatID(market)   
+                const collection = _this.db.collection(market + '-Fills')
+                collection.find({ trade_id: { $gt: flattrade.trade_id } }).toArray(function (err, result) {
+                    
+                    if (err) { 
+                        logger.error(err)       
+                        reject()
+                    }
+                    if(result){
+                        resolve(result)
+                    }
+                  
+                
+                })
+
+            }catch(e){
+                console.log(e)
+                reject(e)
+            }
+        })
+
+    };
 
     /**
      * get flat id from file for market
      * @param {String} market 
      */
-    Get_FlatID(market){
+    getFlatID(market){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
-                let col = market + "-flatid"
+                let col = market + "-FlatID"
                 _this.db.collection(col).find().sort( {$natural: -1}).limit(1).toArray( function (err, result) {                 
                     if (err) { 
                         logger.error('Get_FlatID DB error', err)
@@ -151,7 +172,7 @@ class MongoTools {
                     }
                     else{
                        // console.log(result[0].flatid)
-                        resolve(result[0].flatid)
+                        resolve(result[0])
                     }
                 }) 
 
@@ -226,15 +247,18 @@ class MongoTools {
      * @param {Array} fill Array of fill objects to insert
      * @param {String} market Market for which these fills are being inserted
      */
-    InsertManyFills(fill, market){
-        let _this = this
+    insertManyFills(fill, market){
+       
         return new Promise((resolve, reject)=>{
             try{
                 if(fill !== null && fill.length > 0) {        
                     let options = { ordered: false }                     
-                    _this.db.collection(market).insertMany(fill, options, function (err, result){         
-                        if(err){ reject() }               
-                        else{ resolve() }                        
+                    this.db.collection(market + "-Fills").insertMany(fill, options, function (err, result){         
+                        if(err){ 
+                            logger.warn("insertManyFills", err)
+                            resolve(err.result.nInserted > 0 ? true : false)
+                        }               
+                        else{ resolve(result.insertedCount > 0 ? true : false) }                        
                     });
                 }
             }catch(e){
@@ -250,20 +274,19 @@ class MongoTools {
      * @param {Array} transfer Array fo transfer objects
      * @param {String} market String for market for which coins were transferred
      */
-    InsertManyTransfers(market, transfer){
+    insertManyTransfers(market, transfer){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
-                let m = market+"-transfers"
-                let options = { ordered: false };
-                for(let i=0;i<transfer.length;i++){
-                    transfer[i].completed_at = new Date(transfer[i].completed_at)
-                    transfer[i].created_at = new Date(transfer[i].created_at)
-                    transfer[i].processed_at = new Date(transfer[i].processed_at)
-                }               
+                let m = market + "-Transfers"
+                let options = { ordered: false };                      
                 _this.db.collection(m).insertMany(transfer, options, function (err, result) {                
-                    if(err.code !== 11000) { reject() }
-                    else{ resolve() }
+                    if(err) { 
+                        resolve(err.result.nInserted > 0 ? true : false) 
+                    }
+                    else{ 
+                        resolve(result.insertedCount > 0 ? true : false) 
+                    }
                 });
 
             }catch(e){
@@ -354,31 +377,27 @@ class MongoTools {
     /**
      * 
      * @param {Number} filledid Filled id to search from
-     * @param {String} market Market to search in
+     * @param {String} token Token to search for
+     * @param {Int} time optional date object or timestamp in ms to search after
      */
-    GetTransfers(market, filledid){
+    getTransfers(token, _exchange, time = 0){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
-                let m = market+"-transfers"
+                let m = token +"-Transfers"
+    
 
-                _this.FindLastFill(market, filledid).then((data)=>{
-
-                    if(data.length > 0){
-                        let xdate = new Date(data[data.length -1].time)
-                        _this.db.collection(m).find({ created_at: { $gte: xdate } }).toArray(function (err, result) {
-                            if (err) {
-                                console.log('mpongo get', err)
-                                reject(null)
-                            }
-                            else{resolve(result)}                                                          
-                        }) 
-                    }
-                    else {
-                        console.log('mongo lin 353')
+                let xdate = typeof time === 'object' ? time : new Date(time)
+                _this.db.collection(m).find({ time: { $gte: xdate }, exchange:  _exchange}).toArray(function (err, result) {
+                    if (err) {
+                        logger.error('getTransfers error', err)
                         resolve(null)
-                    }                    
-                })
+                    }
+                    else{resolve(result)}                                                          
+                }) 
+             
+                               
+             
                  
             }catch(e){
                 console.log(e)
@@ -388,49 +407,7 @@ class MongoTools {
         })
     };
 
-    /**
-     * Gets all trades after filled id for market
-     * @param {String} market Market to search in
-     * @param {Number} filledid Filled id to serach from
-     */
-    CalcFromFill(market, filledid){
-        let _this = this
-        return new Promise((resolve, reject)=>{
-            try{
-    
-                const collection = _this.db.collection(market)
-                collection.find({ trade_id: { $gt: filledid } }).toArray(function (err, result) {
-                    
-                    if (result) {
-                        let newdata = []
-                        result.forEach((element)=>{
-                            let el ={
-                                'flat_id': element.flat_id, 
-                                'price':  element.price,
-                                'product_id': element.product_id,
-                                 'side': element.side,
-                                 'size': element.size,                         
-                                 'time': element.time,
-                                 'trade_id': element.trade_id     
-                            }
-                            newdata.push(el)
-                        })
-                        resolve(newdata)
-                    }
-                    else{
-                        reject()
-                    }
-                  
-                
-                })
-
-            }catch(e){
-                console.log(e)
-                reject()
-            }
-        })
-
-    };
+   
 
     /**
      * 

@@ -1,26 +1,67 @@
 
 const Market = require('./gemini_market')
 const settings = require('./gemini_settings')
+const G_Rest = require('./gemini_rest')
+
+const checkInternet = require('../../../helper/checkinternet').checkInternet
+const sleep = require('../../../helper/sleep').sleep
 
 class GeminiExchange {
 
-        constructor(){
+        constructor(db){
               this.markets = {}                
-              this.exchange = 'gemini'    
+              this.exchange = 'gemini'  
+              this.db = db  
+              this.rest = new G_Rest(this.db)
               this.socket= null                                  
               this.init = this.init.bind(this)
-              this.defaultmarkets = ['btcusd', 'daiusd', 'batusd']
+              this.defaultmarkets = ['BTCUSD']
+
+              this.marketBalances = this.marketBalances.bind(this)
               this.init()
         }
 
-
-
-        init(){
-            console.log(this.exchange)  
+        async init(){           
+            if(!await this.pingServer()){
+                await sleep(15000)
+                return this.init()
+            }
             this.defaultmarkets.forEach(mrk=> this.addMarket(mrk))
-                           
+            this.mainLoop()               
         }
 
+
+
+        /**
+         * Main Loop 
+         */
+        async mainLoop(){
+            //couldnt ping server, wait and restart
+            if(!await this.pingServer()){ return this.restartLoop(15000) }
+            
+            //send active balance to markets
+            await this.marketBalances()
+            
+            
+
+            //restart loop
+            this.restartLoop(3000)
+        }
+
+        async restartLoop(delay){
+            await sleep(delay)
+            this.mainLoop()
+        }
+
+        marketBalances(){
+            return new Promise(async (resolve, reject) =>{
+                let bals = await this.rest.getMyAvailableBalances()
+
+                for(let mark in this.markets){
+                    this.markets[mark].setBalances(bals)
+                }
+            })
+        }            
         /**
          * 
          * @param {String} market  hyphenated market to trade ie BTCUSD
@@ -33,9 +74,8 @@ class GeminiExchange {
                 }
             }
             if(index !== -1){
-                let mrk = new Market(market)      
+                let mrk = new Market(market, this.db, this.rest)      
                 this.markets[market] = mrk
-
             }
                 
         }
@@ -54,6 +94,18 @@ class GeminiExchange {
             }
         }
 
+
+        pingServer(){
+            return new Promise((resolve, reject) =>{
+                checkInternet((canping)=>{
+                    if(!canping){
+                        console.log(`cant reach: ${this.exchange} api` )
+                    }
+                    resolve(canping)
+    
+                }, "exchange.gemini.com")
+            })
+        }
 
 
 

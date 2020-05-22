@@ -12,23 +12,31 @@ class Engine {
       
         this.internetout = true
         this.exchanges = []
-        this.db = db.connectDB()
+        this.db = null
         this.createExchange = this.createExchange.bind(this);
         this.enginePreCheck = this.enginePreCheck.bind(this)
+        this.startDB = this.startDB.bind(this)
         this.socket = null
         this.init()
     }
 
     async init(){
-        //connect to database
-        
-        // db.connectDB().catch( err =>{
-        //     console.log(err)
-        //     logger.error('db connection error', err)
-
-       
-        // })
+        //connect to database                
+        this.db = await this.startDB()
+        this.createExchange('gemini')
        this.start()
+    }
+
+    async startDB(){
+        return new Promise((resolve, reject)=>{
+            db.connectDB().then(result =>{
+                resolve(db)
+            }).catch(async (e)=>{
+                console.log('db failed to connect')
+                await sleep(1200)                
+                this.startDB()
+            })            
+        })
     }
 
     async start(){
@@ -116,7 +124,7 @@ class Engine {
             if(!index){                
                 switch(name){
                     case 'gemini':
-                        let gemEx = new GeminiExchange()                                                
+                        let gemEx = new GeminiExchange(this.db)                                                
                         this.exchanges.push({ name: 'gemini', exchange: gemEx})   
                         resolve(true)
                         break;                                                         

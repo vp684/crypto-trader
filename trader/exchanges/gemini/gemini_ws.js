@@ -66,12 +66,14 @@ class Gemini_Websocket{
     }
 
     
-    openOrderSocket(){
+    openOrderSocket(cb){
 
         this.ws.openOrderSocket( data => {
             console.log('data', data)
             this.ws.addOrderMessageListener( _data => {
                 console.log('_data', _data)
+
+                cb(_data)
             })
         })
                
