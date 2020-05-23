@@ -126,24 +126,27 @@ class Gemini_REST{
         let id = randomBytes(10).toString('hex')
         console.log(id)
 
+        let order = {
+            "client_order_id": id,
+            "symbol": market, 
+            "amount": qty, 
+            "price": price,
+            "side": side, 
+            "type": "exchange limit",
+            "options": opts
+        }
+
        
         return new Promise((resolve, reject) =>{
             let exec = () => {
-                this.api.newOrder({
-                    "client_order_id": id,
-                    "symbol": market, 
-                    "amount": qty, 
-                    "price": price,
-                    "side": side, 
-                    "type": "exchange limit",
-                    "options": opts
-                })
+                this.api.newOrder(order)
             }
             let final = {
                 name: "newOrder" + id, 
                 func: exec
             }
             this.pushPrivate(final)
+            resolve(order)
         })
 
     }
