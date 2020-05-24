@@ -3,6 +3,7 @@ let obmanager = require('./gemini_orderbook_mgr')
 const G_WS = require('./gemini_ws')
 const BigNumber = require('bignumber.js')
 const G_Format = require('./gemini_format')
+const Strategy = require('../../strategy/strategy')
 
 
 
@@ -37,6 +38,10 @@ class Market {
             sentOrders:[],
             bids: [],
             asks: []
+        }
+        this.strategy = new Strategy()
+        this.stats = {
+
         }
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
@@ -78,15 +83,8 @@ class Market {
 
                     trades.forEach((value) => { value.time = new Date(data.timestampms) })
                     this.updateCandles(trades)
-                }
-
-
-              
-                
-               
-            }
-
-           
+                }                                             
+            }           
         })
     }
 
@@ -109,8 +107,6 @@ class Market {
       
 
         await this.calculatePosition()
-
-
 
         if(this.position.calculated){
             //position is correct for exchange. continue logic
@@ -143,16 +139,15 @@ class Market {
         //    this.newOrder('0.001', '4000.01', 'buy')
         // }
 
-        
-       
-        
+                       
         if(this.market_data.candles !== null){
             console.log(this.market_data.candles[0])
             console.log(this.market_data.candles)
-
+            let stats = await this.strategy.maEnvelope(this.market_data.candles, {period: 7, percent: 0.04, type: 'simple', all: false})
+            this.stats.name = stats.name
+            this.stats.data = stats.data
         }
-        
-     
+             
         this.restartLoop(5000)   
         
     }
