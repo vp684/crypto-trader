@@ -3,6 +3,7 @@ let obmanager = require('./gemini_orderbook_mgr')
 const G_WS = require('./gemini_ws')
 const BigNumber = require('bignumber.js')
 const G_Format = require('./gemini_format')
+const Strategy = require('../../strategy/strategy')
 
 
 
@@ -33,8 +34,14 @@ class Market {
             standard_h:[1, 6, 24]
         }
         this.orders = {
-            bids: [], 
+            socket: false,
+            sentOrders:[],
+            bids: [],
             asks: []
+        }
+        this.strategy = new Strategy()
+        this.stats = {
+
         }
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
@@ -55,6 +62,8 @@ class Market {
 
        this.marketListener()  
 
+       this.orderListener()
+
        this.mainLoop() 
     }
 
@@ -74,21 +83,23 @@ class Market {
 
                     trades.forEach((value) => { value.time = new Date(data.timestampms) })
                     this.updateCandles(trades)
-                }
-
-
-              
-                
-               
-            }
-
-           
+                }                                             
+            }           
         })
     }
 
     orderListener(){
         this.ws.openOrderSocket((data) =>{
             console.log(data)
+            if(data.type === 'subscription_ack'){ this.orders.socket = true}
+            for (let i = 0; i < data.length; i++) {
+                const order = data[i];
+                if(order.api_session !== "UI"){
+                    
+                }
+
+            }
+
         })
     }
 
@@ -122,15 +133,21 @@ class Market {
                 
             }
      
-        }
-        
+        }   
+
+        // if(this.orders.socket){
+        //    this.newOrder('0.001', '4000.01', 'buy')
+        // }
+
+                       
         if(this.market_data.candles !== null){
             console.log(this.market_data.candles[0])
             console.log(this.market_data.candles)
-
+            let stats = await this.strategy.maEnvelope(this.market_data.candles, {period: 7, percent: 0.04, type: 'simple', all: false})
+            this.stats.name = stats.name
+            this.stats.data = stats.data
         }
-        
-     
+             
         this.restartLoop(5000)   
         
     }
@@ -140,7 +157,10 @@ class Market {
         this.mainLoop()
     }
 
-
+    async newOrder(qty, price, side){
+        let order = await this.rest.newOrder(this.symbol, qty, price, side)
+        this.orders.sentOrders.push(order)
+    }
 
  
     setBalances(bal){
@@ -216,7 +236,7 @@ class Market {
                         vol: Number(candle.amount),
                         time: candle.time
                     }
-                    let sethr = this.market_data.candles[1].getHours() + 4
+                    let sethr = this.market_data.candles[1].time.getHours() + 4
                     this.market_data.candles[0].time.setHours(sethr, 0, 0, 0)
 
                     this.market_data.candles = [ncndl, ...this.market_data.candles] 

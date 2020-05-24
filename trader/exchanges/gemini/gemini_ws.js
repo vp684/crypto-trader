@@ -68,12 +68,15 @@ class Gemini_Websocket{
     
     openOrderSocket(cb){
 
-        this.ws.openOrderSocket( data => {
-            console.log('data', data)
-            this.ws.addOrderMessageListener( _data => {
-                console.log('_data', _data)
+        this.ws.openOrderSocket(this.symbol, ( _data ) => {
+            
+            console.log('data', _data)
 
-                cb(_data)
+            this.ws.addOrderMessageListener( data => {
+                if(data.type !== 'heartbeat'){
+                    cb(data)
+                }
+                
             })
         })
                
