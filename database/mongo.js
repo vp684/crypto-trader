@@ -108,11 +108,58 @@ class MongoTools {
 
 
 
-    checkForCollection(col_name){
+    getExchangeSettings(exchg, mrk){
         let _this = this
         return new Promise((resolve, reject) => {
             if(_this.db){
-                
+                _this.db.collection('exchange-settings').findOne({exchange: exchg}).then((result, err) =>{
+                    let final = null
+                    if(err){
+                        console.log(err)
+                        logger.error('getExchangeSettings', err)
+                        resolve(final)
+                    }
+                    if(result){
+                        for(let mark in result){
+                           
+                            if(mark === mrk){
+                                final = result[mark]
+                            }
+                            
+                        }
+                        console.log(result)
+                        resolve(final)
+                    }
+                })
+            }
+        })
+
+    }
+
+    setExchangeSettings(exchg, market, settings){       
+
+        let _this = this
+        let options = {
+            upsert: true, 
+            returnOriginal : false
+        }
+               
+        let update = {
+            $set: {
+                [market]:settings
+            }
+        }
+        return new Promise((resolve, reject) => {
+            if(_this.db){
+                _this.db.collection('exchange-settings').findOneAndUpdate({exchange: exchg, }, update, options, (err, result)=>{
+                    if(err){
+                        console.log(err)
+                    }
+                    if(result){
+                        console.log(result)
+                    }
+                    resolve(true)
+                })
             }
         })
 
