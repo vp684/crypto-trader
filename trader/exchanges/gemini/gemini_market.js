@@ -4,6 +4,7 @@ const G_WS = require('./gemini_ws')
 const BigNumber = require('bignumber.js')
 const G_Format = require('./gemini_format')
 const Strategy = require('../../strategy/strategy')
+const Orders = require('./gemini_orders')
 
 
 
@@ -33,12 +34,7 @@ class Market {
             standard_m:[1, 5, 15, 30],
             standard_h:[1, 6, 24]
         }
-        this.orders = {
-            socket: false,
-            sentOrders:[],
-            bids: [],
-            asks: []
-        }
+        this.orders = new Orders(db)
         this.strategy = new Strategy()
         this.stats = {
 
@@ -56,15 +52,15 @@ class Market {
     }
 
     async init(){    
-       console.log('gemini market open', this.symbol)        
+        console.log('gemini market open', this.symbol)        
        
-       this.initCandles()  
+        //this.initCandles()  
+        //this.marketListener()  
 
-       this.marketListener()  
+        //this.orderListener()
 
-       this.orderListener()
-
-       this.mainLoop() 
+       
+        //this.mainLoop() 
     }
 
     marketListener(){        
