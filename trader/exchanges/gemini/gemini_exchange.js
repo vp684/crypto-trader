@@ -15,7 +15,7 @@ class GeminiExchange {
               this.rest = new G_Rest(this.db)
               this.socket= null                                  
               this.init = this.init.bind(this)
-              this.defaultmarkets = ['DAIUSD']
+              this.defaultmarkets = []
               this.settings = new Settings(db)
 
               this.marketBalances = this.marketBalances.bind(this)
@@ -27,7 +27,7 @@ class GeminiExchange {
                 await sleep(15000)
                 return this.init()
             }
-            this.defaultmarkets.forEach(mrk=> this.addMarket(mrk))
+            this.defaultmarkets = this.settings.getDefaultMarkets()
             this.mainLoop()               
         }
 
@@ -75,7 +75,7 @@ class GeminiExchange {
                 }
             }
             if(index !== -1){
-                let mrk = new Market(market, this.db, this.rest)      
+                let mrk = new Market(market, this.db, this.settings, this.rest)      
                 this.markets[market] = mrk
             }
                 

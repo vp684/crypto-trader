@@ -4,8 +4,7 @@ const GeminiAPI = require('gemini-api-vp').default
 const sleep = require('../../../helper/sleep').sleep
 const logger = require('../../../helper/logger')
 const G_Format = require('./gemini_format')
-const crypto = require('crypto')
-const randomBytes = crypto.randomBytes
+
 
  
 
@@ -111,7 +110,7 @@ class Gemini_REST{
      * @param {String} side  "buy" or "sell"
      * @param {Boolean} makerbool default true for maker or cancel
      */
-    newOrder(market, qty, price, side, makerbool = true ){
+    newOrder(market, qty, price, side, uid,  makerbool = true ){
         // client_order_id?: string
         // symbol: string
         // amount: string
@@ -123,11 +122,9 @@ class Gemini_REST{
         if(makerbool){
             opts.push('maker-or-cancel')    
         }
-        let id = randomBytes(10).toString('hex')
-        console.log(id)
-
+        
         let order = {
-            "client_order_id": id,
+            "client_order_id": uid,
             "symbol": market, 
             "amount": qty, 
             "price": price,
@@ -142,13 +139,27 @@ class Gemini_REST{
                 this.api.newOrder(order)
             }
             let final = {
-                name: "newOrder" + id, 
+                name: "newOrder" + uid, 
                 func: exec
             }
             this.pushPrivate(final)
             resolve(order)
         })
 
+    }
+
+    cancelOrder(id){
+        return new Promise((resolve, reject) => {
+            let exec = () => {
+                this.api.cancelOrder({order_id: id})
+            }
+            let final = {
+                name: "cancelOrder" + id,
+                func: exec
+            }
+            this.pushPrivate(final)
+            resolve(id)
+        })
     }
 
     getCandles(symbol, timeframe = '1hr'){

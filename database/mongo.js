@@ -108,7 +108,7 @@ class MongoTools {
 
 
 
-    getExchangeSettings(exchg, mrk){
+    getExchangeSettings(exchg){
         let _this = this
         return new Promise((resolve, reject) => {
             if(_this.db){
@@ -119,16 +119,9 @@ class MongoTools {
                         logger.error('getExchangeSettings', err)
                         resolve(final)
                     }
-                    if(result){
-                        for(let mark in result){
-                           
-                            if(mark === mrk){
-                                final = result[mark]
-                            }
-                            
-                        }
+                    if(result){                   
                         console.log(result)
-                        resolve(final)
+                        resolve(result)
                     }
                 })
             }
@@ -181,6 +174,10 @@ class MongoTools {
             try{
 
                 let flattrade = await _this.getFlatID(market)   
+                if(flattrade === undefined){
+                    //no trades yet 
+                    return resolve(0)
+                }
                 const collection = _this.db.collection(market + '-Fills')
                 collection.find({ trade_id: { $gt: flattrade.trade_id } }).toArray(function (err, result) {
                     

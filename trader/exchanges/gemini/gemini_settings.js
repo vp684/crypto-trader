@@ -9,17 +9,12 @@ module.exports = class Settings {
         this.default_markets = ["btcusd", 'daiusd']
     }
 
-    getSettings(market, exchange){
-        if(exchange === 'gemini'){
-            if(market === 'DAIUSD'){
-                return{
-                    tradeable: 300.00, 
-                    num_entries: 3, 
-                    min_bid_vol: 0.1
-                }
-            }
+    getSettings(market){
+        this.db.getExchangeSettings('gemini', market).then(data=>{
 
-        }
+        }).catch(err=>{
+            console.log(err)
+        })
     }   
    
 

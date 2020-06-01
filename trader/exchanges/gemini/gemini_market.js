@@ -9,7 +9,7 @@ const Orders = require('./gemini_orders')
 
 
 class Market {
-    constructor(symbol, db, rest){
+    constructor(symbol, db, settings, rest){
 
         this.format = new G_Format()
         this.symbol = symbol      
@@ -24,7 +24,7 @@ class Market {
         }
         this.balances = {
             usd: null,  
-            symbol:null,  
+            qty: null,  
             update: false
         }
         this.market_data = {
@@ -34,10 +34,11 @@ class Market {
             standard_m:[1, 5, 15, 30],
             standard_h:[1, 6, 24]
         }
-        this.orders = new Orders(db)
+        this.orders = new Orders(symbol, rest, db)
         this.strategy = new Strategy()
+        this.settings = settings
         this.stats = {
-
+            data: null
         }
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
@@ -48,19 +49,21 @@ class Market {
         this.socket = null
         this.marketListener = this.marketListener.bind(this)
         this.calculatePosition = this.calculatePosition.bind(this)  
+
+        this.testing = false
         this.init()
     }
 
     async init(){    
         console.log('gemini market open', this.symbol)        
        
-        //this.initCandles()  
-        //this.marketListener()  
+        this.initCandles()  
+        this.marketListener()  
 
-        //this.orderListener()
-
+        this.orderListener()
+        await this.calculatePosition()
        
-        //this.mainLoop() 
+        this.mainLoop() 
     }
 
     marketListener(){        
@@ -87,75 +90,102 @@ class Market {
     orderListener(){
         this.ws.openOrderSocket((data) =>{
             console.log(data)
-            if(data.type === 'subscription_ack'){ this.orders.socket = true}
-            for (let i = 0; i < data.length; i++) {
-                const order = data[i];
-                if(order.api_session !== "UI"){
-                    
-                }
-
+            if(data.type === 'subscription_ack'){ 
+                this.orders.socket = true
             }
+            if(data.length){
+                for (let i = 0; i < data.length; i++) {
+                    const order = data[i];
+                    if(order.api_session !== "UI"){
+                        if(order.side === "buy"){
+                            this.orders.bidUpdate(order)
+                        }   
+                        if(order.side === "sell"){
+                            this.orders.offerUpdate(order)
+                        } 
+                        
+                    }
+    
+                }
+            }
+            
 
         })
     }
 
     async mainLoop(){        
       
-
-        await this.calculatePosition()
+        /**
+         * 1. get balances from rest
+         * 2. check against balances in database
+         * 3. get candles
+         * 4. calculate indicators
+         * 5. create bid and offer models
+         * 6. send orders to mathc bid.offer models
+         * 7. update to current data
+         * 
+         */
+       
 
         if(this.position.calculated){
-            //position is correct for exchange. continue logic
+            // 1, 2 position is correct for exchange. continue logic
 
-            let ob = await this.obMgr.book.state()
-            if(ob.ready){
-                let date =  new Date(ob.time)
-                let hours =  date.getHours().toString() + ":"
-                let minutes = date.getMinutes().toString() + ":"
-                let seconds = date.getSeconds().toString()+ "."
-                let mills = date.getMilliseconds().toString()
-                let topbook = {
-                    ask: ob.asks[0].price.toString(),
-                    ask_vol: ob.asks[0].size.toString(),    
-                    bid: ob.bids[0].price.toString(),
-                    bid_vol: ob.bids[0].size.toString(), 
-                    time: hours + minutes + seconds + mills
-                    
-                }
-                //console.log(this.symbol, topbook)
-                if(this.socket){  
-                    this.socket.emit(this.symbol, {symbol: this.symbol, data: topbook} )
-                }
+            if(this.market_data.candles !== null){
+                //candles complete
+                //console.log(this.market_data.candles[0])
+                //console.log(this.market_data.candles)
                 
+                //this.stats = await this.strategy.maEnvelope(this.market_data.candles, {period: 7, percent: 0.02, type: 'simple', all: false})
+
+                this.states = this.strategy.applyStrategy()
+                //indicators complete
+
+                let ob = await this.obMgr.book.state()
+                if(ob.ready){
+                    let date =  new Date(ob.time)
+                    let hours =  date.getHours().toString() + ":"
+                    let minutes = date.getMinutes().toString() + ":"
+                    let seconds = date.getSeconds().toString()+ "."
+                    let mills = date.getMilliseconds().toString()
+                    let topbook = {
+                        ask: ob.asks[0].price.toString(),
+                        ask_vol: ob.asks[0].size.toString(),    
+                        bid: ob.bids[0].price.toString(),
+                        bid_vol: ob.bids[0].size.toString(), 
+                        time: hours + minutes + seconds + mills
+                        
+                    }
+
+                    if(this.stats.data !== null){
+                        await this.orders.createBidModel(topbook, this.position, this.stats)
+                        console.log(this.orders.bidModel)
+                    }
+
+                    //console.log(this.symbol, topbook)
+                    if(this.socket){  
+                        this.socket.emit(this.symbol, {symbol: this.symbol, data: topbook} )
+                    }
+
+                    //this.orders.manageBids()
+                    if(!this.testing){
+                        
+                    }
+        
+                }
+                                 
             }
      
-        }   
+        }else{
+            await this.calculatePosition()
+        }                                                             
 
-        // if(this.orders.socket){
-        //    this.newOrder('0.001', '4000.01', 'buy')
-        // }
-
-                       
-        if(this.market_data.candles !== null){
-            console.log(this.market_data.candles[0])
-            console.log(this.market_data.candles)
-            let stats = await this.strategy.maEnvelope(this.market_data.candles, {period: 7, percent: 0.04, type: 'simple', all: false})
-            this.stats.name = stats.name
-            this.stats.data = stats.data
-        }
-             
-        this.restartLoop(5000)   
+        this.restartLoop(500)   
         
     }
 
     async restartLoop(delay){
         await sleep(delay)
         this.mainLoop()
-    }
-
-    async newOrder(qty, price, side){
-        let order = await this.rest.newOrder(this.symbol, qty, price, side)
-        this.orders.sentOrders.push(order)
     }
 
  
@@ -167,7 +197,11 @@ class Market {
                     this.balances.usd = bal[i].available
                 }
                 if(bal[i].currency == this.tradesymbol){
-                    this.balances.symbol = bal[i].available
+                    this.balances.qty = bal[i].available
+                }
+                if(i == bal.length -1 && this.balances.qty == null){
+                    this.balances.qty = 0
+
                 }
             }
             this.balances.update = new Date().getTime()
@@ -307,12 +341,13 @@ class Market {
                 // check exchange balance against reported amounts                
                 exchange_bal = exchange_bal.plus(total_withdrawals)
                                 
-                let rest_balance = BigNumber(this.balances.symbol)
+                let rest_balance = BigNumber(this.balances.qty)
                 if(exchange_bal.isEqualTo(rest_balance) ){ //
                     this.position = {
-                        total_avg_price: total_avg_price,       
-                        exchange_qty: exchange_bal,
-                        total_quantity: total_bal,
+                        total_avg_price: Number.isNaN(total_avg_price.toNumber()) === true ? 0 : total_avg_price.toNumber() ,       
+                        exchange_qty: exchange_bal.toNumber(),
+                        total_quantity: total_bal.toNumber(),
+                        equity: Number.isNaN(total_avg_price.multipliedBy(exchange_bal).toNumber()) === true ? 0 : total_avg_price.multipliedBy(exchange_bal).toNumber(),
                         calculated: true
                     }
                     return resolve(true)
