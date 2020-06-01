@@ -1,6 +1,6 @@
 
 const Market = require('./gemini_market')
-const Settings = require('./gemini_settings')
+const Settings = require('../settings/exchange_settings')
 const G_Rest = require('./gemini_rest')
 
 const checkInternet = require('../../../helper/checkinternet').checkInternet
