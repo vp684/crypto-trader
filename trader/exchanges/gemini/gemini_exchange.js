@@ -16,7 +16,7 @@ class GeminiExchange {
               this.socket= null                                  
               this.init = this.init.bind(this)
               this.defaultmarkets = []
-              this.settings = new Settings(db)
+              this.settings = new Settings(this.exchange, db)
 
               this.marketBalances = this.marketBalances.bind(this)
               this.init()
@@ -26,8 +26,11 @@ class GeminiExchange {
             if(!await this.pingServer()){
                 await sleep(15000)
                 return this.init()
-            }
-            this.defaultmarkets = this.settings.getDefaultMarkets()
+            }            
+            this.defaultmarkets = await this.settings.getDefaultMarkets()
+            this.defaultmarkets.forEach(mrk =>{
+                this.addMarket(mrk)
+            })
             this.mainLoop()               
         }
 
@@ -67,17 +70,14 @@ class GeminiExchange {
          * 
          * @param {String} market  hyphenated market to trade ie BTCUSD
          */
-        addMarket(market){
-            let index = this.settings.markets.indexOf(market)
-            for(let mrk in this.markets){
-                if(mrk === market){
-                    index = -1
-                }
-            }
-            if(index !== -1){
+        addMarket(market){     
+            if(!this.markets[market]){
                 let mrk = new Market(market, this.db, this.settings, this.rest)      
                 this.markets[market] = mrk
+                
             }
+
+           
                 
         }
 

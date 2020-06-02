@@ -11,7 +11,7 @@ const Orders = require('./gemini_orders')
 class Market {
     constructor(symbol, db, settings, rest){
 
-        this.format = new G_Format()
+        
         this.symbol = symbol      
         this.tradesymbol = symbol.slice(0, 3).toUpperCase()
         this.position = {
@@ -34,9 +34,11 @@ class Market {
             standard_m:[1, 5, 15, 30],
             standard_h:[1, 6, 24]
         }
+        this.format = new G_Format()
         this.orders = new Orders(symbol, rest, db)
         this.strategy = new Strategy()
         this.settings = settings
+        this.market_settings = null
         this.stats = {
             data: null
         }
@@ -50,13 +52,13 @@ class Market {
         this.marketListener = this.marketListener.bind(this)
         this.calculatePosition = this.calculatePosition.bind(this)  
 
-        this.testing = false
         this.init()
     }
 
     async init(){    
         console.log('gemini market open', this.symbol)        
-       
+        this.market_settings = await this.settings.getMarketSettings(this.symbol)
+        this.market_data.period = this.market_settings.strategy.candle_period
         this.initCandles()  
         this.marketListener()  
 
@@ -88,8 +90,7 @@ class Market {
     }
 
     orderListener(){
-        this.ws.openOrderSocket((data) =>{
-            console.log(data)
+        this.ws.openOrderSocket((data) =>{   
             if(data.type === 'subscription_ack'){ 
                 this.orders.socket = true
             }
@@ -131,13 +132,11 @@ class Market {
             // 1, 2 position is correct for exchange. continue logic
 
             if(this.market_data.candles !== null){
-                //candles complete
-                //console.log(this.market_data.candles[0])
-                //console.log(this.market_data.candles)
+                //candles complete  
                 
                 //this.stats = await this.strategy.maEnvelope(this.market_data.candles, {period: 7, percent: 0.02, type: 'simple', all: false})
 
-                this.states = this.strategy.applyStrategy()
+                this.stats = await this.strategy.applyStrategy(this.market_data.candles, this.market_settings.strategy.strategy)
                 //indicators complete
 
                 let ob = await this.obMgr.book.state()
@@ -160,16 +159,12 @@ class Market {
                         await this.orders.createBidModel(topbook, this.position, this.stats)
                         console.log(this.orders.bidModel)
                     }
-
-                    //console.log(this.symbol, topbook)
+                 
                     if(this.socket){  
                         this.socket.emit(this.symbol, {symbol: this.symbol, data: topbook} )
                     }
 
-                    //this.orders.manageBids()
-                    if(!this.testing){
-                        
-                    }
+                    this.orders.manageBids()                
         
                 }
                                  
@@ -217,7 +212,7 @@ class Market {
         let type =  period === 'hr' ? this.market_data.standard_h : this.market_data.standard_m
         let searchperiod = false
         for(let i = type.length -1; i > -1; i--){
-            if(type[i] < digits){
+            if(type[i] <= digits){
                 let finalperiod = digits % type[i] === 0 ? type[i] : 0
                 if(finalperiod > 0){
                     searchperiod = finalperiod
@@ -416,8 +411,7 @@ class Market {
    
 
     setSocket(socket){
-        this.socket = socket
-        console.log(this.socket.id)
+        this.socket = socket        
     }
 
     setSocketEvents(){

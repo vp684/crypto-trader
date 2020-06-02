@@ -1,4 +1,4 @@
-const Settings = require('./gemini_settings')
+const Settings = require('../settings/exchange_settings')
 const crypto = require('crypto')
 const randomBytes = crypto.randomBytes
 
@@ -21,7 +21,7 @@ module.exports = class Orders{
         }
         this.bids = []
         this.offers = []
-        this.settings = new Settings(db)
+        this.settings = new Settings('gemini', db)
         this.db = db
         this.sent = false
         this.symbol = symbol
@@ -31,12 +31,12 @@ module.exports = class Orders{
     }
 
     async init(){
-        this.config = await this.db.getExchangeSettings('gemini', this.symbol)
+        this.config = await this.settings.getMarketSettings(this.symbol)
     }
 
     createBidModel(topofbook, position, stats){
         return new Promise((resolve, reject)=>{
-            let market = this.symbol  
+
             let bm = []
            
             let cfg = this.config
@@ -89,8 +89,8 @@ module.exports = class Orders{
                 }
                           
                 let ro = {
-                    'price': bidlevel.toFixed(cfg.price_decimal_places),
-                    'vol': vol.toString()
+                    'price': Number(bidlevel.toFixed(cfg.price_decimal_places)),
+                    'vol': vol
                 }   
                     
                 bm.push(ro)
@@ -146,25 +146,29 @@ module.exports = class Orders{
             let cancelbid = true
             for (let k = 0; k < this.bidModel.orders.length; k++) {
                 const bidmodel = this.bidModel.orders[k];
-                if(bidmodel.price === bid.price){
-                    if(bidmodel.vol === bid.original_amount){
+                if(bidmodel.price === Number(bid.price)){
+                    if(bidmodel.vol === Number(bid.original_amount)){
                         cancelbid = false
                     }
                 }
 
             }
 
-            for (let k = 0; k < this.bidModel.xlsent.length; k++) {
-                const xlbid = this.bidModel.xlsent[k];
-                if(bid.order_id == xlbid){
-                    cancelbid = false
-                }
-            }
+            // for (let k = 0; k < this.bidModel.xlsent.length; k++) {
+            //     const xlbid = this.bidModel.xlsent[k];
+            //     if(bid.order_id == xlbid){
+            //         cancelbid = false
+            //     }
+            // }
 
             if(cancelbid){
                 //send cancel for current bid
-                let co = await this.cancelOrder(bid.client_order_id)
-                this.bidModel.xlsent.push(co)
+                let xlsent = this.bidModel.xlsent.includes(bid.order_id)
+                if(!xlsent){
+                    let co = await this.cancelOrder(bid.order_id)
+                    this.bidModel.xlsent.push(co)
+                }
+                
             }
             
         }
@@ -178,7 +182,7 @@ module.exports = class Orders{
             //check if already on book
             for (let k = 0; k < this.bids.length; k++) {
                 const bid = this.bids[k];
-                if(modelbid.price === bid.price && modelbid.vol === bid.original_amount){
+                if(modelbid.price === Number(bid.price) && modelbid.vol === Number(bid.original_amount)){
                     bidmatch = true
                     k = this.bids.length
                 }                                                
@@ -187,7 +191,7 @@ module.exports = class Orders{
             //check if already sent
             for (let k = 0; k < this.bidModel.sent.length; k++) {
                 const sentbid = this.bidModel.sent[k];
-                if(modelbid.price === sentbid.price && modelbid.vol === sentbid.amount){
+                if(modelbid.price === Number(sentbid.price) && modelbid.vol === Number(sentbid.amount)){
                     bidmatch = true
                     k = this.bidModel.sent.length
                 }                                
@@ -196,7 +200,7 @@ module.exports = class Orders{
             //not sent nor on book, send order
             if(!bidmatch){
                
-                let bo = await this.newOrder(modelbid.vol, modelbid.price, 'buy')               
+                let bo = await this.newOrder(modelbid.vol.toString(), modelbid.price.toString(), 'buy')               
                 this.bidModel.sent.push(bo)              
             }
 
@@ -304,8 +308,7 @@ module.exports = class Orders{
     }
 
     async newOrder(qty, price, side){  
-        let uid = randomBytes(10).toString('hex')
-        console.log(id)                
+        let uid = randomBytes(10).toString('hex')             
         let order = await this.rest.newOrder(this.symbol, qty, price, side, uid)
         return order
     }
