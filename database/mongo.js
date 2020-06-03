@@ -424,7 +424,7 @@ class MongoTools {
      * @param {String} token Token to search for
      * @param {Int} time optional date object or timestamp in ms to search after
      */
-    getTransfers(token, _exchange, time = 0){
+    getTransfers(token, time = 0){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
@@ -432,7 +432,7 @@ class MongoTools {
     
 
                 let xdate = typeof time === 'object' ? time : new Date(time)
-                _this.db.collection(m).find({ time: { $gte: xdate }, exchange:  _exchange}).toArray(function (err, result) {
+                _this.db.collection(m).find({ time: { $gte: xdate } }).toArray(function (err, result) { //exchange:  _exchange
                     if (err) {
                         logger.error('getTransfers error', err)
                         resolve(null)

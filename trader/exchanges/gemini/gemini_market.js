@@ -295,22 +295,30 @@ class Market {
                 //get db fills and transfers
                 let fills = await this.db.calcFromFill(this.symbol)
                 let xfertime = fills.length > 0 ? fills[0].time : 0
-                let transfers = await this.db.getTransfers(this.tradesymbol, this.exchange, xfertime)
+                let transfers = await this.db.getTransfers(this.tradesymbol, xfertime)
  
-                let total_withdrawals = BigNumber(0)
+                let total_transfers = BigNumber(0)
+                let exchange_transfers = BigNumber(0)
                 for (let i = 0; i < transfers.length; i++) {
                     const xfer = transfers[i];
-                    if(xfer.type === 'withdrawal'){
+                    if(xfer.type === 'withdrawal' || xfer.type === 'withdraw'){
                         let subtract = BigNumber(xfer.amount)
-                        total_withdrawals = total_withdrawals.minus(subtract)
+                        total_transfers = total_transfers.minus(subtract)
+                        if(xfer.exchange === this.exchange){
+                            exchange_transfers = exchange_transfers.minus(subtract)
+                        }
                     }
                     if(xfer.type === 'deposit'){
                         let addition = BigNumber(xfer.amount)
-                        total_withdrawals = total_withdrawals.plus(addition)
+                        total_transfers = total_transfers.plus(addition)
+                        if(xfer.exchange === this.exchange){
+                            exchange_transfers = exchange_transfers.plus(addition)
+                        }
                     }
-
-
                 }    
+
+               
+
 
                 let exchange_bal = BigNumber(0) // compare to exchange balances to see fi we are missing trades in db
                 let total_price = BigNumber(0) // pre calc for total avg entry price across all exchanges                                 
@@ -323,7 +331,8 @@ class Market {
                     let price = BigNumber(fill.price)
 
                     // add all buy qtys from all exchanges to total_bal used for calculating avg prices excluding sales.
-                    total_bal = fill.side === 'buy' ? total_bal.plus(qty) : total_bal
+                    
+                    total_bal = fill.side === 'buy' ? total_bal.plus(qty) : total_bal.minus(qty)
                     total_price = fill.side === 'buy' ? total_price.plus(price.multipliedBy(qty)) : total_price
                     if(fill.exchange == this.exchange){
                         //same exchange calculate exchange quantitiy, or amount available to sell on this exchange.                                              
@@ -334,7 +343,8 @@ class Market {
 
                 let total_avg_price = total_price.dividedBy(total_bal)
                 // check exchange balance against reported amounts                
-                exchange_bal = exchange_bal.plus(total_withdrawals)
+                exchange_bal = exchange_bal.plus(exchange_transfers)
+                total_bal = total_bal.plus(total_transfers)
                                 
                 let rest_balance = BigNumber(this.balances.qty)
                 if(exchange_bal.isEqualTo(rest_balance) ){ //

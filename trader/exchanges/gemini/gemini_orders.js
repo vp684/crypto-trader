@@ -153,14 +153,7 @@ module.exports = class Orders{
                 }
 
             }
-
-            // for (let k = 0; k < this.bidModel.xlsent.length; k++) {
-            //     const xlbid = this.bidModel.xlsent[k];
-            //     if(bid.order_id == xlbid){
-            //         cancelbid = false
-            //     }
-            // }
-
+            
             if(cancelbid){
                 //send cancel for current bid
                 let xlsent = this.bidModel.xlsent.includes(bid.order_id)
