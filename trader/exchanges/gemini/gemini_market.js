@@ -9,9 +9,9 @@ const Orders = require('./gemini_orders')
 
 
 class Market {
-    constructor(symbol, db, rest){
+    constructor(symbol, db, settings, rest){
 
-        this.format = new G_Format()
+        
         this.symbol = symbol      
         this.tradesymbol = symbol.slice(0, 3).toUpperCase()
         this.position = {
@@ -24,7 +24,7 @@ class Market {
         }
         this.balances = {
             usd: null,  
-            symbol:null,  
+            qty: null,  
             update: false
         }
         this.market_data = {
@@ -34,10 +34,13 @@ class Market {
             standard_m:[1, 5, 15, 30],
             standard_h:[1, 6, 24]
         }
-        this.orders = new Orders(db)
+        this.format = new G_Format()
+        this.orders = new Orders(symbol, rest, db)
         this.strategy = new Strategy()
+        this.settings = settings
+        this.market_settings = null
         this.stats = {
-
+            data: null
         }
         this.ws = new G_WS(symbol)
         this.obMgr = new obmanager(this.symbol)
@@ -48,19 +51,21 @@ class Market {
         this.socket = null
         this.marketListener = this.marketListener.bind(this)
         this.calculatePosition = this.calculatePosition.bind(this)  
+
         this.init()
     }
 
     async init(){    
         console.log('gemini market open', this.symbol)        
-       
-        //this.initCandles()  
-        //this.marketListener()  
+        this.market_settings = await this.settings.getMarketSettings(this.symbol)
+        this.market_data.period = this.market_settings.strategy.candle_period
+        this.initCandles()  
+        this.marketListener()  
 
-        //this.orderListener()
-
+        this.orderListener()
+        await this.calculatePosition()
        
-        //this.mainLoop() 
+        this.mainLoop() 
     }
 
     marketListener(){        
@@ -85,77 +90,97 @@ class Market {
     }
 
     orderListener(){
-        this.ws.openOrderSocket((data) =>{
-            console.log(data)
-            if(data.type === 'subscription_ack'){ this.orders.socket = true}
-            for (let i = 0; i < data.length; i++) {
-                const order = data[i];
-                if(order.api_session !== "UI"){
-                    
-                }
-
+        this.ws.openOrderSocket((data) =>{   
+            if(data.type === 'subscription_ack'){ 
+                this.orders.socket = true
             }
+            if(data.length){
+                for (let i = 0; i < data.length; i++) {
+                    const order = data[i];
+                    if(order.api_session !== "UI"){
+                        if(order.side === "buy"){
+                            this.orders.bidUpdate(order)
+                        }   
+                        if(order.side === "sell"){
+                            this.orders.offerUpdate(order)
+                        } 
+                        
+                    }
+    
+                }
+            }
+            
 
         })
     }
 
     async mainLoop(){        
       
-
-        await this.calculatePosition()
+        /**
+         * 1. get balances from rest
+         * 2. check against balances in database
+         * 3. get candles
+         * 4. calculate indicators
+         * 5. create bid and offer models
+         * 6. send orders to mathc bid.offer models
+         * 7. update to current data
+         * 
+         */
+       
 
         if(this.position.calculated){
-            //position is correct for exchange. continue logic
+            // 1, 2 position is correct for exchange. continue logic
 
-            let ob = await this.obMgr.book.state()
-            if(ob.ready){
-                let date =  new Date(ob.time)
-                let hours =  date.getHours().toString() + ":"
-                let minutes = date.getMinutes().toString() + ":"
-                let seconds = date.getSeconds().toString()+ "."
-                let mills = date.getMilliseconds().toString()
-                let topbook = {
-                    ask: ob.asks[0].price.toString(),
-                    ask_vol: ob.asks[0].size.toString(),    
-                    bid: ob.bids[0].price.toString(),
-                    bid_vol: ob.bids[0].size.toString(), 
-                    time: hours + minutes + seconds + mills
-                    
-                }
-                //console.log(this.symbol, topbook)
-                if(this.socket){  
-                    this.socket.emit(this.symbol, {symbol: this.symbol, data: topbook} )
-                }
+            if(this.market_data.candles !== null){
+                //candles complete  
                 
+                //this.stats = await this.strategy.maEnvelope(this.market_data.candles, {period: 7, percent: 0.02, type: 'simple', all: false})
+
+                this.stats = await this.strategy.applyStrategy(this.market_data.candles, this.market_settings.strategy.strategy)
+                //indicators complete
+
+                let ob = await this.obMgr.book.state()
+                if(ob.ready){
+                    let date =  new Date(ob.time)
+                    let hours =  date.getHours().toString() + ":"
+                    let minutes = date.getMinutes().toString() + ":"
+                    let seconds = date.getSeconds().toString()+ "."
+                    let mills = date.getMilliseconds().toString()
+                    let topbook = {
+                        ask: ob.asks[0].price.toString(),
+                        ask_vol: ob.asks[0].size.toString(),    
+                        bid: ob.bids[0].price.toString(),
+                        bid_vol: ob.bids[0].size.toString(), 
+                        time: hours + minutes + seconds + mills
+                        
+                    }
+
+                    if(this.stats.data !== null){
+                        await this.orders.createBidModel(topbook, this.position, this.stats)
+                        console.log(this.orders.bidModel)
+                    }
+                 
+                    if(this.socket){  
+                        this.socket.emit(this.symbol, {symbol: this.symbol, data: topbook} )
+                    }
+
+                    this.orders.manageBids()                
+        
+                }
+                                 
             }
      
-        }   
+        }else{
+            await this.calculatePosition()
+        }                                                             
 
-        // if(this.orders.socket){
-        //    this.newOrder('0.001', '4000.01', 'buy')
-        // }
-
-                       
-        if(this.market_data.candles !== null){
-            console.log(this.market_data.candles[0])
-            console.log(this.market_data.candles)
-            let stats = await this.strategy.maEnvelope(this.market_data.candles, {period: 7, percent: 0.04, type: 'simple', all: false})
-            this.stats.name = stats.name
-            this.stats.data = stats.data
-        }
-             
-        this.restartLoop(5000)   
+        this.restartLoop(500)   
         
     }
 
     async restartLoop(delay){
         await sleep(delay)
         this.mainLoop()
-    }
-
-    async newOrder(qty, price, side){
-        let order = await this.rest.newOrder(this.symbol, qty, price, side)
-        this.orders.sentOrders.push(order)
     }
 
  
@@ -167,7 +192,11 @@ class Market {
                     this.balances.usd = bal[i].available
                 }
                 if(bal[i].currency == this.tradesymbol){
-                    this.balances.symbol = bal[i].available
+                    this.balances.qty = bal[i].available
+                }
+                if(i == bal.length -1 && this.balances.qty == null){
+                    this.balances.qty = 0
+
                 }
             }
             this.balances.update = new Date().getTime()
@@ -183,7 +212,7 @@ class Market {
         let type =  period === 'hr' ? this.market_data.standard_h : this.market_data.standard_m
         let searchperiod = false
         for(let i = type.length -1; i > -1; i--){
-            if(type[i] < digits){
+            if(type[i] <= digits){
                 let finalperiod = digits % type[i] === 0 ? type[i] : 0
                 if(finalperiod > 0){
                     searchperiod = finalperiod
@@ -266,22 +295,30 @@ class Market {
                 //get db fills and transfers
                 let fills = await this.db.calcFromFill(this.symbol)
                 let xfertime = fills.length > 0 ? fills[0].time : 0
-                let transfers = await this.db.getTransfers(this.tradesymbol, this.exchange, xfertime)
+                let transfers = await this.db.getTransfers(this.tradesymbol, xfertime)
  
-                let total_withdrawals = BigNumber(0)
+                let total_transfers = BigNumber(0)
+                let exchange_transfers = BigNumber(0)
                 for (let i = 0; i < transfers.length; i++) {
                     const xfer = transfers[i];
-                    if(xfer.type === 'withdrawal'){
+                    if(xfer.type === 'withdrawal' || xfer.type === 'withdraw'){
                         let subtract = BigNumber(xfer.amount)
-                        total_withdrawals = total_withdrawals.minus(subtract)
+                        total_transfers = total_transfers.minus(subtract)
+                        if(xfer.exchange === this.exchange){
+                            exchange_transfers = exchange_transfers.minus(subtract)
+                        }
                     }
                     if(xfer.type === 'deposit'){
                         let addition = BigNumber(xfer.amount)
-                        total_withdrawals = total_withdrawals.plus(addition)
+                        total_transfers = total_transfers.plus(addition)
+                        if(xfer.exchange === this.exchange){
+                            exchange_transfers = exchange_transfers.plus(addition)
+                        }
                     }
-
-
                 }    
+
+               
+
 
                 let exchange_bal = BigNumber(0) // compare to exchange balances to see fi we are missing trades in db
                 let total_price = BigNumber(0) // pre calc for total avg entry price across all exchanges                                 
@@ -294,7 +331,8 @@ class Market {
                     let price = BigNumber(fill.price)
 
                     // add all buy qtys from all exchanges to total_bal used for calculating avg prices excluding sales.
-                    total_bal = fill.side === 'buy' ? total_bal.plus(qty) : total_bal
+                    
+                    total_bal = fill.side === 'buy' ? total_bal.plus(qty) : total_bal.minus(qty)
                     total_price = fill.side === 'buy' ? total_price.plus(price.multipliedBy(qty)) : total_price
                     if(fill.exchange == this.exchange){
                         //same exchange calculate exchange quantitiy, or amount available to sell on this exchange.                                              
@@ -305,14 +343,16 @@ class Market {
 
                 let total_avg_price = total_price.dividedBy(total_bal)
                 // check exchange balance against reported amounts                
-                exchange_bal = exchange_bal.plus(total_withdrawals)
+                exchange_bal = exchange_bal.plus(exchange_transfers)
+                total_bal = total_bal.plus(total_transfers)
                                 
-                let rest_balance = BigNumber(this.balances.symbol)
+                let rest_balance = BigNumber(this.balances.qty)
                 if(exchange_bal.isEqualTo(rest_balance) ){ //
                     this.position = {
-                        total_avg_price: total_avg_price,       
-                        exchange_qty: exchange_bal,
-                        total_quantity: total_bal,
+                        total_avg_price: Number.isNaN(total_avg_price.toNumber()) === true ? 0 : total_avg_price.toNumber() ,       
+                        exchange_qty: exchange_bal.toNumber(),
+                        total_quantity: total_bal.toNumber(),
+                        equity: Number.isNaN(total_avg_price.multipliedBy(exchange_bal).toNumber()) === true ? 0 : total_avg_price.multipliedBy(exchange_bal).toNumber(),
                         calculated: true
                     }
                     return resolve(true)
@@ -381,8 +421,7 @@ class Market {
    
 
     setSocket(socket){
-        this.socket = socket
-        console.log(this.socket.id)
+        this.socket = socket        
     }
 
     setSocketEvents(){
