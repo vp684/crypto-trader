@@ -299,7 +299,7 @@ class MongoTools {
                     let options = { ordered: false }                     
                     this.db.collection(market + "-Fills").insertMany(fill, options, function (err, result){         
                         if(err){ 
-                            logger.warn("insertManyFills", err)
+                            //logger.warn("insertManyFills", err)
                             resolve(err.result.nInserted > 0 ? true : false)
                         }               
                         else{ resolve(result.insertedCount > 0 ? true : false) }                        

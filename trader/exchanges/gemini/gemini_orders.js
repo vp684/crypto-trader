@@ -34,6 +34,42 @@ module.exports = class Orders{
         this.config = await this.settings.getMarketSettings(this.symbol)
     }
 
+    orderUpdate(bid){
+        // new data about bid cancel or add to active bids
+        console.log(bid)
+        let newBid = {
+            client_order_id: bid.client_order_id, 
+            order_id: bid.order_id,
+            time: bid.timestampms,
+            is_live: bid.is_live ,
+            is_cancelled: bid.is_cancelled,
+            executed_amount: bid.executed_amount,
+            remaining_amount: bid.remaining_amount,
+            original_amount: bid.original_amount,
+            price: bid.price, 
+            symbol: bid.symbol,                         
+        }   
+   
+        if(bid.type === 'rejected'){
+            console.log('rejected order', bid)
+        }
+        if(bid.type === 'initial'){
+            this.bids.push(newBid)
+        }
+        if(bid.type === 'closed'){
+            let index = this.bids.findIndex(item => item.client_order_id == bid.client_order_id)
+            this.bids.splice(index, 1)
+
+            let xlindex = this.bidModel.xlsent.findIndex(item => item == bid.order_id)
+            this.bidModel.xlsent.splice(xlindex, 1)
+        }       
+        if(bid.type === 'booked'){
+            let index = this.bidModel.sent.findIndex(item => item.client_order_id == bid.client_order_id)
+            this.bidModel.sent.splice(index, 1)
+            this.bids.push(bid)
+        }
+    }
+
     createBidModel(topofbook, position, stats){
         return new Promise((resolve, reject)=>{
 
@@ -59,7 +95,9 @@ module.exports = class Orders{
             let bandpercent = 0.001                                                           
             let vol = cfg.min_vol
             let singlevalue  = bid * vol//  $4000 * 0.01 = $40.00    
-    
+            if(cfg.bid_value < singlevalue){
+                vol = parseFloat((cfg.bid_value / bid).toFixed(1))
+            }
                 
             let adjust = parseFloat((statlevel * bandpercent).toFixed(cfg.price_decimal_places));
             let bidlevel = parseFloat((statlevel - adjust).toFixed(cfg.price_decimal_places));
@@ -100,41 +138,7 @@ module.exports = class Orders{
         })
     };
      
-    bidUpdate(bid){
-        // new data about bid cancel or add to active bids
-        console.log(bid)
-        let newBid = {
-            client_order_id: bid.client_order_id, 
-            order_id: bid.order_id,
-            time: bid.timestampms,
-            is_live: bid.is_live ,
-            is_cancelled: bid.is_cancelled,
-            executed_amount: bid.executed_amount,
-            remaining_amount: bid.remaining_amount,
-            original_amount: bid.original_amount,
-            price: bid.price, 
-            symbol: bid.symbol,                         
-        }   
-   
-        if(bid.type === 'rejected'){
-            console.log('rejected order', bid)
-        }
-        if(bid.type === 'initial'){
-            this.bids.push(newBid)
-        }
-        if(bid.type === 'closed'){
-            let index = this.bids.findIndex(item => item.client_order_id == bid.client_order_id)
-            this.bids.splice(index, 1)
-
-            let xlindex = this.bidModel.xlsent.findIndex(item => item == bid.client_order_id)
-            this.bidModel.xlsent.splice(xlindex, 1)
-        }       
-        if(bid.type === 'booked'){
-            let index = this.bidModel.sent.findIndex(item => item.client_order_id == bid.client_order_id)
-            this.bidModel.sent.splice(index, 1)
-            this.bids.push(bid)
-        }
-    }
+  
        
     async manageBids(){
         //called after book state to send cancels and new bids.

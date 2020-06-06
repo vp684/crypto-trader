@@ -354,6 +354,7 @@ class Market {
                         total_quantity: total_bal.toNumber(),
                         equity: Number.isNaN(total_avg_price.multipliedBy(exchange_bal).toNumber()) === true ? 0 : total_avg_price.multipliedBy(exchange_bal).toNumber(),
                         calculated: true
+                        
                     }
                     return resolve(true)
                 }else{
