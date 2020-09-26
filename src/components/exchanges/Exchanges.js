@@ -23,13 +23,13 @@ import ExchangeCard from "./ExchangeCard"
    
 // }));
 
-export default function Exchanges(){
+export default function Exchanges(props){
     //const classes = useStyles();
-    return(
-       
-        <div >          
-            <ExchangeCard name="Gemini"/>           
-        </div>
-      
+    return(       
+        <div > 
+            {props.exchanges.map((ex, key) => (
+                <ExchangeCard key={key} name={ex}/>
+            ))}                                
+        </div>      
     )
 }

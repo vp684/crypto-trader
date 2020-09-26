@@ -247,7 +247,12 @@ class Gemini_REST{
                     if(results){
                         let transfers = results.filter(item =>  item.currency == symbol)
                         transfers = await this.format.restTransfers(transfers, symbol)
-                        let inserted = await this.db.insertManyTransfers(symbol, transfers)
+
+                        let inserted = 0
+                        if(transfers.length > 0){
+                            inserted = await this.db.insertManyTransfers(symbol, transfers)        
+                        }
+
                         resolve({
                             nInserted: inserted, 
                             transfers: transfers

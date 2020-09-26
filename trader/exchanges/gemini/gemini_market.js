@@ -51,20 +51,23 @@ class Market {
         this.socket = null
         this.marketListener = this.marketListener.bind(this)
         this.calculatePosition = this.calculatePosition.bind(this)  
+        this.marketBalances = this.marketBalances.bind(this)
+        this.halt = false
 
         this.init()
     }
 
     async init(){    
-        console.log('gemini market open', this.symbol)        
+        console.log('gemini market open', this.symbol)    
+        await this.db.CreateFillsDB(this.symbol)    
+        await this.db.CreateTransfersDB(this.symbol)
+        await this.db.CreateFlatIdDB(this.symbol)     
+        await this.marketBalances()  
         this.market_settings = await this.settings.getMarketSettings(this.symbol)
         this.market_data.period = this.market_settings.strategy.candle_period
         this.initCandles()  
         this.marketListener()  
-
-        this.orderListener()
-        await this.calculatePosition()
-       
+        this.orderListener()       
         this.mainLoop() 
     }
 
@@ -81,7 +84,6 @@ class Market {
                 
                 let trades = data.events.filter(order => order.type === "trade")
                 if(trades.length > 0){
-
                     trades.forEach((value) => { value.time = new Date(data.timestampms) })
                     this.updateCandles(trades)
                 }                                             
@@ -90,7 +92,7 @@ class Market {
     }
 
     orderListener(){
-        this.ws.openOrderSocket((data) =>{   
+        this.ws.openOrderSocket(async (data) =>{   
             if(data.type === 'subscription_ack'){ 
                 this.orders.socket = true
             }
@@ -98,13 +100,10 @@ class Market {
                 for (let i = 0; i < data.length; i++) {
                     const order = data[i];
                     if(order.api_session !== "UI"){
-                        if(order.side === "buy"){
-                            this.orders.bidUpdate(order)
-                        }   
-                        if(order.side === "sell"){
-                            this.orders.offerUpdate(order)
-                        } 
-                        
+                        await this.orders.orderUpdate(order)    
+                        if(order.type === 'fill'){
+                            this.position.calculated = false
+                        }                               
                     }
     
                 }
@@ -126,11 +125,11 @@ class Market {
          * 7. update to current data
          * 
          */
-       
+        if(this.halt) return 
 
         if(this.position.calculated){
             // 1, 2 position is correct for exchange. continue logic
-
+            this.orders.setSettings(this.market_settings)
             if(this.market_data.candles !== null){
                 //candles complete  
                 
@@ -151,20 +150,49 @@ class Market {
                         ask_vol: ob.asks[0].size.toString(),    
                         bid: ob.bids[0].price.toString(),
                         bid_vol: ob.bids[0].size.toString(), 
-                        time: hours + minutes + seconds + mills
-                        
+                        time: hours + minutes + seconds + mills,   
+                        book: {
+                            asks: ob.asks, 
+                            bids: ob.bids
+                        }                     
                     }
+
 
                     if(this.stats.data !== null){
                         await this.orders.createBidModel(topbook, this.position, this.stats)
-                        console.log(this.orders.bidModel)
+                        await this.orders.createOfferModel(topbook, this.position, this.stats )
+                        
+                        this.orders.manageBids()      
+
+                        this.orders.manageOffers() 
                     }
                  
                     if(this.socket){  
-                        this.socket.emit(this.symbol, {symbol: this.symbol, data: topbook} )
+                        this.socket.emit('gemini', {
+                                symbol: this.symbol, 
+                                exchange: this.exchange,
+                                data: {
+                                    bids: this.orders.bidModel,
+                                    offers:this.orders.offerModel,
+                                    book: topbook, 
+                                    stats: this.stats,  
+                                    pos: this.position, 
+                                    env: this.stats.data[0]                        
+                                }
+                        } )
                     }
 
-                    this.orders.manageBids()                
+                    
+
+                    console.log({
+                        symbol: this.symbol,
+                        bids: this.orders.bidModel,
+                        offers:this.orders.offerModel,
+                        book: topbook, 
+                        stats: this.stats,  
+                        pos: this.position, 
+                        env: this.stats.data[0]                        
+                    })           
         
                 }
                                  
@@ -185,24 +213,35 @@ class Market {
 
  
     setBalances(bal){
-        
-        if(bal.length > 0){
-            for(let i = 0; i < bal.length; i++){
-                if(bal[i].currency == 'USD'){
-                    this.balances.usd = bal[i].available
+        return new Promise((resolve, reject) => {
+            if(bal.length > 0){
+                for(let i = 0; i < bal.length; i++){
+                    if(bal[i].currency == 'USD'){
+                        this.balances.usd = bal[i].available
+                    }
+                    if(bal[i].currency == this.tradesymbol){
+                        this.balances.qty = bal[i].amount
+                    }
+                    if(i == bal.length -1 && this.balances.qty == null){
+                        this.balances.qty = 0
+    
+                    }
                 }
-                if(bal[i].currency == this.tradesymbol){
-                    this.balances.qty = bal[i].available
-                }
-                if(i == bal.length -1 && this.balances.qty == null){
-                    this.balances.qty = 0
-
-                }
+                this.balances.update = new Date().getTime()
             }
-            this.balances.update = new Date().getTime()
-        }
-        console.log(bal)
+            console.log(bal)
+            resolve()
+        })        
     }
+
+    marketBalances(){
+        return new Promise(async (resolve, reject) =>{
+            let bals = await this.rest.getMyAvailableBalances()            
+            await this.setBalances(bals)            
+            resolve()
+        })
+    } 
+
 
     async initCandles(){
         let digits = this.market_data.period.match(/\d+/)[0]
@@ -286,11 +325,10 @@ class Market {
 
     calculatePosition(){
 
-
         return new Promise(async (resolve, reject) =>{
             
 
-            if(this.balances.symbol !== null){
+            if(this.balances.update !== false){
                     //calculate position
                 //get db fills and transfers
                 let fills = await this.db.calcFromFill(this.symbol)
@@ -317,12 +355,15 @@ class Market {
                     }
                 }    
 
-               
-
 
                 let exchange_bal = BigNumber(0) // compare to exchange balances to see fi we are missing trades in db
                 let total_price = BigNumber(0) // pre calc for total avg entry price across all exchanges                                 
                 let total_bal = BigNumber(0) //  total balance accross all exchanges for calcualting avg price to sell at
+                let bal_for_avg_price = BigNumber(0)
+
+                //seperate buys and sells
+                // let buys = fills.filter(fill => fill.side === "buy").reverse()
+                // let sells = fills.filter(fill => fill.side === "sell").reverse()
 
 
                 for (let i = 0; i < fills.length; i++) {
@@ -333,7 +374,9 @@ class Market {
                     // add all buy qtys from all exchanges to total_bal used for calculating avg prices excluding sales.
                     
                     total_bal = fill.side === 'buy' ? total_bal.plus(qty) : total_bal.minus(qty)
+                    bal_for_avg_price = fill.side === 'buy' ? bal_for_avg_price.plus(qty) : bal_for_avg_price
                     total_price = fill.side === 'buy' ? total_price.plus(price.multipliedBy(qty)) : total_price
+
                     if(fill.exchange == this.exchange){
                         //same exchange calculate exchange quantitiy, or amount available to sell on this exchange.                                              
                         exchange_bal = fill.side === 'buy' ? exchange_bal.plus(qty) : exchange_bal.minus(qty)
@@ -341,7 +384,8 @@ class Market {
                     }                  
                 }
 
-                let total_avg_price = total_price.dividedBy(total_bal)
+                let total_avg_price = total_price.dividedBy(bal_for_avg_price)
+
                 // check exchange balance against reported amounts                
                 exchange_bal = exchange_bal.plus(exchange_transfers)
                 total_bal = total_bal.plus(total_transfers)
@@ -356,20 +400,37 @@ class Market {
                         calculated: true
                         
                     }
+                    if(exchange_bal.isEqualTo(0) && fills.length > 0){
+                        //record flat id.
+                      
+                        let flatOrder = fills[0]
+                        if(flatOrder.side === "sell"){                          
+                            this.db.Write_FlatID(flatOrder, this.symbol)
+                        }
+                        
+                       
+                       
+                    }
+
                     return resolve(true)
                 }else{
-                    this.position.reset_counter += 1
-                    if(this.position.reset_counter > 10){
+                    await this.marketBalances()
+                    this.position.reset_counter += 1                    
+                    if(this.position.reset_counter > 5){
                         // missing some trades or transfers in db
                         if(fills.length > 0){
                             await this.getAllFillsXfers(fills[0].time)
+                        }else {
+                            await this.getAllFillsXfers(new Date(2000, 0, 0, 0))
                         }
-                        
+                        this.position.reset_counter = 0
                     }
                 }
+            }else{
+                await this.marketBalances()                
             }
-            resolve(false)
             
+            resolve(false)
             
         })
         
@@ -390,19 +451,24 @@ class Market {
                         if(lastFill === l_trade_time){
                             trade_continue = false
                         }
-                        lastFill =  l_trade_time                     
+                        lastFill = l_trade_time                     
                     }    
 
                     if(xfer_continue){
                         let transfers = await this.rest.getMyTransfers(this.tradesymbol, {limit_transfers: 50, timestamp: time }) 
-                        let l_xfer_time = transfers.transfers[transfers.transfers.length -1].time.getTime()
-                        if(lastXfer === l_xfer_time){
+                        if(transfers.transfers.length > 0){
+                            let l_xfer_time = transfers.transfers[transfers.transfers.length -1].time.getTime()
+                            if(lastXfer === l_xfer_time){
+                                xfer_continue = false
+                            }
+                            lastXfer = l_xfer_time
+                        }else{
                             xfer_continue = false
                         }
-                        lastXfer =  l_xfer_time
+                        
                     }
 
-                    if(!trade_continue && ! xfer_continue){
+                    if(!trade_continue && !xfer_continue){
                         condition = false 
                         return resolve()                       
                     }
@@ -433,7 +499,16 @@ class Market {
             console.log('no socket')
         }
     } 
+
+    stop(){
+        //halt market remove references clear sockets.
+        this.halt = true
+    }
     
+
+    setSettings(cfg){        
+        this.market_settings = cfg
+    }
 }
 
 module.exports = Market

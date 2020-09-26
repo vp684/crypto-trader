@@ -14,8 +14,6 @@ class Gemini_Websocket{
         this.init = this.init.bind(this)         
     }
 
-
-
     init(){
            
        

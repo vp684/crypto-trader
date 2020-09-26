@@ -73,9 +73,7 @@ export default function ExchangeCard(props) {
       </CardContent>
       <CardActions>
         <Button size="small" className={classes.toggle} onClick={toggleExchange} >On / Off</Button>
-        <Button size='small' onClick={() =>{handleUrl(ex_name)}}>Markets</Button>
-        <Button size="small">Settings</Button>
-        
+        <Button size='small' onClick={() =>{handleUrl(ex_name)}}>Markets</Button>             
       </CardActions>
     </Card>
   );

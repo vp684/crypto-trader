@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import clsx from 'clsx';
 import { useHistory } from "react-router-dom";
 import { makeStyles, useTheme } from '@material-ui/core/styles';
@@ -18,6 +18,8 @@ import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import PowerSettingsNewIcon from '@material-ui/icons/PowerSettingsNew';
 import Main from './Main'
+
+import io from 'socket.io-client'
 
 const drawerWidth = 240;
 
@@ -72,12 +74,16 @@ const useStyles = makeStyles((theme) => ({
   
 }));
 
+const socket = io.connect('http://localhost:8000', {reconnectionDelay: 3000}) 
+
 export default function LayOut() {
   const classes = useStyles();
   const theme = useTheme();
   let history = useHistory()
   
-  const [open, setOpen] = React.useState(true);
+  const [data, setData] = useState([])
+  const [open, setOpen] = useState(true);
+  const [exchanges, setExchanges] = useState([])  
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -86,6 +92,38 @@ export default function LayOut() {
   const handleDrawerClose = () => {
     setOpen(false);
   };
+      
+  useEffect(() => {   
+    //get active excahnges from server
+    fetch("/getActiveExchanges").then( response => {
+      response.json().then(body =>{ 
+        setExchanges(body)
+      })    
+    })  
+           
+  }, [])
+
+   
+  useEffect(() => {
+    exchanges.forEach((exchange) => { 
+      
+      socket.on(exchange, (sdata)=>{   
+        let final = [...data]
+        let index = final.findIndex(d => d.symbol === sdata.symbol)
+        if(index === -1){      
+          final.push(sdata)
+        }else{       
+          final[index] = sdata
+        }    
+        setData(final)
+      })  
+  
+    })
+  }, [exchanges])
+
+  
+  
+
 
   const serverToggle = async () => {
 
@@ -161,7 +199,7 @@ export default function LayOut() {
         </List>     
       </Drawer>
 
-      <Main />
+      <Main data={data} exchanges={exchanges}/>
     </div>
   );
 }

@@ -9,17 +9,17 @@ const sleep = require('../../../helper/sleep').sleep
 class GeminiExchange {
 
         constructor(db){
-              this.markets = {}                
-              this.exchange = 'gemini'  
-              this.db = db  
-              this.rest = new G_Rest(this.db)
-              this.socket= null                                  
-              this.init = this.init.bind(this)
-              this.defaultmarkets = []
-              this.settings = new Settings(this.exchange, db)
-
-              this.marketBalances = this.marketBalances.bind(this)
-              this.init()
+            this.markets = {}                
+            this.exchange = 'gemini'  
+            this.db = db  
+            this.rest = new G_Rest(this.db)
+            this.socket= null                                  
+            this.init = this.init.bind(this)
+            this.defaultmarkets = []
+            this.settings = new Settings(this.exchange, db)
+            this.intialized = false
+            this.marketBalances = this.marketBalances.bind(this)
+            this.init()
         }
 
         async init(){           
@@ -31,7 +31,8 @@ class GeminiExchange {
             this.defaultmarkets.forEach(mrk =>{
                 this.addMarket(mrk)
             })
-            this.mainLoop()               
+           // this.mainLoop() 
+            this.intialized = true              
         }
 
 
@@ -41,15 +42,15 @@ class GeminiExchange {
          */
         async mainLoop(){
             //couldnt ping server, wait and restart
-            if(!await this.pingServer()){ return this.restartLoop(15000) }
+            if(this.intialized){
+                if(!await this.pingServer()){ return this.restartLoop(15000) }
             
-            //send active balance to markets
-            await this.marketBalances()
-            
-            
-
+                //send active balance to markets
+               // await this.marketBalances()
+            }
+                                   
             //restart loop
-            this.restartLoop(3000)
+            this.restartLoop(1500)
         }
 
         async restartLoop(delay){
@@ -64,6 +65,7 @@ class GeminiExchange {
                 for(let mark in this.markets){
                     this.markets[mark].setBalances(bals)
                 }
+                resolve()
             })
         }            
         /**
@@ -73,12 +75,8 @@ class GeminiExchange {
         addMarket(market){     
             if(!this.markets[market]){
                 let mrk = new Market(market, this.db, this.settings, this.rest)      
-                this.markets[market] = mrk
-                
-            }
-
-           
-                
+                this.markets[market] = mrk                
+            }                           
         }
 
         getMarkets(){
@@ -92,6 +90,18 @@ class GeminiExchange {
         setSocketToMarkets(socket){
             for(let mrk in this.markets){               
                 this.markets[mrk].setSocket(socket)
+            }
+        }
+
+        getExchangeStatus(){
+            return this.intialized
+        }
+
+        stop(){
+            // remove all listeners, stop markets, and return results.
+            for(let mrk in this.markets){               
+                this.markets[mrk].stop()
+                
             }
         }
 

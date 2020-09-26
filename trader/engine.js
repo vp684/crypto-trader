@@ -24,7 +24,7 @@ class Engine {
         //connect to database                
         this.db = await this.startDB()
         this.createExchange('gemini')
-       this.start()
+        this.start()
     }
 
     async startDB(){
@@ -140,6 +140,8 @@ class Engine {
         
     }
 
+   
+
     getMarkets(exchange){
 
         return new Promise((resolve, reject) =>{
@@ -167,15 +169,58 @@ class Engine {
         })
     }
    
+    getExchangeStatus(ex_name){
+        let final = []
+        this.exchanges.forEach(ex => {
+            if(ex.name === ex_name){
+                final = { name: ex.name, status: ex.getExchangeStatus() }
+            }
+        })
+
+        return final
+    }
 
 
-
-    setExchangeSocket(socket){
-        
+    setExchangeSocket(socket){        
         this.exchanges.forEach(ex =>{
             ex.exchange.setSocketToMarkets(socket)
-
         })        
+    }
+
+
+    removeExchange(ex_name){        
+        this.exchanges.forEach(ex =>{
+            if(ex.name === ex_name){
+                ex.stop()                                
+            }
+        })        
+    }
+
+    getActiveExchangeNames(){
+        return new Promise((resolve, reject) => {
+            resolve(this.exchanges.map(ex => ex.name))
+        })
+         
+    }
+
+    getConfig(exch, market){
+        return new Promise (async (resolve, reject) => {
+            let config = null
+            let exchange = this.exchanges.find(ex => ex.name == exch)
+            if(exchange){
+                config = await exchange.exchange.settings.getMarketSettings(market)
+            }
+            resolve(config)
+        })
+    }
+
+    setConfig(reqBody){
+        return new Promise (async (resolve, reject) => {
+            let exchange = this.exchanges.find(ex => ex.name === reqBody.ex)
+            if(exchange){
+                exchange.exchange.markets[reqBody.market].setSettings(reqBody.config)
+            }
+        })
     }
 
 

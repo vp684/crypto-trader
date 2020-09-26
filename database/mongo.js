@@ -73,7 +73,7 @@ class MongoTools {
     * @param {*} market string - crypto marekt name eg ETHUSD
     * 
     */
-    CreateFillsDB(market, exchange){
+    CreateFillsDB(market){
         let _this = this
         return new Promise((resolve, reject)=>{
             if(_this.db){
@@ -100,6 +100,19 @@ class MongoTools {
                 resolve(true)
             }else{
                 logger.warn('CreateTransfersDB promise reject, no db object')
+                reject(false)
+            }
+        })
+    }
+
+    CreateFlatIdDB(market){
+        let _this = this
+        return new Promise((resolve, reject)=>{
+            if(_this.db){
+                _this.db.collection(market + "-FlatID").createIndex({ "time": -1, 'exchange': 1, "id": -1 }, { unique: true })
+                resolve(true)
+            }else{
+                logger.warn('CreateFlatIdDB promise reject, no db object')
                 reject(false)
             }
         })
@@ -176,7 +189,7 @@ class MongoTools {
                 let flattrade = await _this.getFlatID(market)   
                 if(flattrade === undefined){
                     //no trades yet 
-                    return resolve(0)
+                    return resolve([])
                 }
                 const collection = _this.db.collection(market + '-Fills')
                 collection.find({ trade_id: { $gt: flattrade.trade_id } }).toArray(function (err, result) {
@@ -215,8 +228,13 @@ class MongoTools {
                         reject() 
                     }
                     else{
-                       // console.log(result[0].flatid)
-                        resolve(result[0])
+                       // console.log(result[0].flatid)                   
+                        if(result.length > 0){
+                            resolve(result[0])                             
+                        }else{
+                            resolve({trade_id: 0})
+                        }
+                       
                     }
                 }) 
 
@@ -233,17 +251,12 @@ class MongoTools {
      * @param {Number} lastflatid 
      * @param {String} market 
      */
-    Write_FlatID(lastflatid, market){
+    Write_FlatID(order, market){
         let _this = this
         return new Promise((resolve, reject)=>{
             try{
-                let col = market + "-flatid"
-                  console.log('new flat id', lastflatid)
-                let newflatid = {
-                    flatid: lastflatid
-                }
-                console.log('flatid object', newflatid)
-                _this.db.collection(col).insertOne(newflatid, function (err, result) {
+                let col = market + "-FlatID"        
+                _this.db.collection(col).insertOne(order, function (err, result) {
                      //assert.equal(null, err);
                     //   assert.equal(1, result);
                     console.log(result)

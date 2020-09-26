@@ -5,7 +5,7 @@ module.exports = class Settings {
         this.exchange = ex
         this.db = db       
         this.default_markets = []
-
+        this.settings = null
         this.getMarketSettings =  this.getMarketSettings.bind(this)
         this.getDefaultMarkets = this.getDefaultMarkets.bind(this)
         this.init()
@@ -22,6 +22,7 @@ module.exports = class Settings {
             this.db.getExchangeSettings(this.exchange).then(data => {
                 for(let mrk in data){
                     if(mrk === market){
+                        this.settings = data[mrk]
                         return resolve(data[mrk])
                     }
                 }
